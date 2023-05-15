@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import boto3
 from dotenv import load_dotenv
 from picamera2 import Picamera2
@@ -45,6 +45,7 @@ def main():
 
     # Get for folder and filename
     now = datetime.now()
+    now = now.replace(tzinfo=timezone.utc)
 
     year = now.year
     month = now.month
