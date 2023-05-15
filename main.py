@@ -64,3 +64,5 @@ def main():
     print(f'Temperature: {temp} C')
     print(f'Humidity: {humidity} %')
     print(f'Pressure: {pressure} mbar')
+
+main()
