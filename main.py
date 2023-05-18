@@ -17,11 +17,18 @@ def get_environmental_data():
     sense = SenseHat()
 
     # Get environmental data
-    temp = sense.get_temperature()
+    temp_c = sense.get_temperature()
     humidity = sense.get_humidity()
     pressure = sense.get_pressure()
 
-    return temp, humidity, pressure
+    # Convert temperature to Fahrenheit and round all values to 2 decimal places
+    temp_c = round(temp_c, 2)
+    temp_f = round(temp_c * 9/5 + 32, 2)
+    humidity = round(humidity, 2)
+    pressure = round(pressure, 2)
+
+    return temp_c, temp_f, humidity, pressure
+
 
 
 def upload_to_s3(filename, path):
@@ -60,8 +67,9 @@ def main():
     path = os.path.join(root_dir, folder, filename)
 
     upload_to_s3(filename, path)
-    temp, humidity, pressure = get_environmental_data()
-    print(f'Temperature: {temp} C')
+    temp_c, temp_f, humidity, pressure = get_environmental_data()
+    print(f'Temperature: {temp_c} C')
+    print(f'Temperature: {temp_f} F')
     print(f'Humidity: {humidity} %')
     print(f'Pressure: {pressure} mbar')
 
