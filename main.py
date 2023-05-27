@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 import boto3
+import bme680
 from dotenv import load_dotenv
 from picamera2 import Picamera2
-from sense_hat import SenseHat
 
 
 def capture_image(filename):
@@ -13,22 +15,44 @@ def capture_image(filename):
 
 
 def get_environmental_data():
-    # Initialize SenseHat
-    sense = SenseHat()
+    # Initialize BME680 sensor
+    try:
+        sensor = bme680.BME680(bme680.I2C_ADDR_PRIMARY)
+    except (RuntimeError, IOError):
+        sensor = bme680.BME680(bme680.I2C_ADDR_SECONDARY)
 
-    # Get environmental data
-    temp_c = sense.get_temperature()
-    humidity = sense.get_humidity()
-    pressure = sense.get_pressure()
+    # These oversampling settings can be tweaked to
+    # change the balance between accuracy and noise in
+    # the data.
 
-    # Convert temperature to Fahrenheit and round all values to 2 decimal places
-    temp_c = round(temp_c, 2)
-    temp_f = round(temp_c * 9/5 + 32, 2)
-    humidity = round(humidity, 2)
-    pressure = round(pressure, 2)
+    sensor.set_humidity_oversample(bme680.OS_2X)
+    sensor.set_pressure_oversample(bme680.OS_4X)
+    sensor.set_temperature_oversample(bme680.OS_8X)
+    sensor.set_filter(bme680.FILTER_SIZE_3)
+    sensor.set_gas_status(bme680.ENABLE_GAS_MEAS)
 
-    return temp_c, temp_f, humidity, pressure
+    sensor.set_gas_heater_temperature(320)
+    sensor.set_gas_heater_duration(150)
+    sensor.select_gas_heater_profile(0)
 
+    # Up to 10 heater profiles can be configured, each
+    # with their own temperature and duration.
+    # sensor.set_gas_heater_profile(200, 150, nb_profile=1)
+    # sensor.select_gas_heater_profile(1)
+
+    if sensor.get_sensor_data():
+        output = '{0:.2f} C,{1:.2f} hPa,{2:.2f} %RH'.format(
+            sensor.data.temperature,
+            sensor.data.pressure,
+            sensor.data.humidity)
+
+        if sensor.data.heat_stable:
+            print('{0},{1} Ohms'.format(
+                output,
+                sensor.data.gas_resistance))
+
+        else:
+            print(output)
 
 
 def upload_to_s3(filename, path):
@@ -67,10 +91,7 @@ def main():
     path = os.path.join(root_dir, folder, filename)
 
     upload_to_s3(filename, path)
-    temp_c, temp_f, humidity, pressure = get_environmental_data()
-    print(f'Temperature: {temp_c} C')
-    print(f'Temperature: {temp_f} F')
-    print(f'Humidity: {humidity} %')
-    print(f'Pressure: {pressure} mbar')
+    get_environmental_data()
+
 
 main()
