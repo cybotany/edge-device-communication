@@ -40,19 +40,17 @@ def get_environmental_data():
     # sensor.set_gas_heater_profile(200, 150, nb_profile=1)
     # sensor.select_gas_heater_profile(1)
 
-    if sensor.get_sensor_data():
-        output = '{0:.2f} C,{1:.2f} hPa,{2:.2f} %RH'.format(
-            sensor.data.temperature,
-            sensor.data.pressure,
-            sensor.data.humidity)
+    output = '{0:.2f} C,{1:.2f} hPa,{2:.2f} %RH'.format(
+        sensor.data.temperature,
+        sensor.data.pressure,
+        sensor.data.humidity)
 
-        if sensor.data.heat_stable:
-            print('{0},{1} Ohms'.format(
-                output,
-                sensor.data.gas_resistance))
-
-        else:
-            print(output)
+    if sensor.data.heat_stable:
+        print('{0},{1} Ohms'.format(
+            output,
+            sensor.data.gas_resistance))
+    else:
+        print(output)
 
 
 def upload_to_s3(filename, path):
