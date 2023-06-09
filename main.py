@@ -2,10 +2,42 @@
 
 import os
 from datetime import datetime
+import requests
+import socket
 import boto3
 import bme680
 from dotenv import load_dotenv
 from picamera2 import Picamera2
+from decouple import config
+
+
+def get_local_ip():
+    # Get the local IP address
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))  # Use a default connection to fetch the local IP
+    ip_address = s.getsockname()[0]
+    s.close()
+    return ip_address
+
+
+def get_unique_id():
+    # Get the unique identifier of the Raspberry Pi
+    unique_id = os.popen('cat /sys/class/net/wlan0/address').read()
+    return unique_id
+
+
+def post_to_web_server(ip_address, unique_id):
+    # Post to web server
+    url = config('URL')
+    response = requests.post(f'{url}/identify_cea/', data={
+        'ip_address': ip_address,
+        'identifier': unique_id,
+    })
+
+    if response.status_code == 200:
+        print("Raspberry Pi successfully registered.")
+    else:
+        print("Failed to register Raspberry Pi.")
 
 
 def capture_image(filename):
@@ -67,6 +99,10 @@ def upload_to_s3(filename, path):
 
 def main():
 
+    ip_address = get_local_ip()
+    unique_id = get_unique_id()
+    post_to_web_server(ip_address, unique_id)
+
     # Create root directory
     user = 'test'
     device = 'cea01'
@@ -88,7 +124,7 @@ def main():
     capture_image(filename)
     path = os.path.join(root_dir, folder, filename)
 
-    upload_to_s3(filename, path)
+    #upload_to_s3(filename, path)
     get_environmental_data()
 
 
