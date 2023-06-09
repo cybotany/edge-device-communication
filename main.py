@@ -15,14 +15,14 @@ def get_local_ip():
     # Get the local IP address
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))  # Use a default connection to fetch the local IP
-    ip_address = s.getsockname()[0]
+    ip_address = 1#s.getsockname()[0]
     s.close()
     return ip_address
 
 
 def get_unique_id():
     # Get the unique identifier of the Raspberry Pi
-    unique_id = os.popen('cat /sys/class/net/wlan0/address').read()
+    unique_id = 1#os.popen('cat /sys/class/net/wlan0/address').read()
     return unique_id
 
 
@@ -38,6 +38,7 @@ def post_to_web_server(ip_address, unique_id):
         print("Raspberry Pi successfully registered.")
     else:
         print("Failed to register Raspberry Pi.")
+        print(response.text)
 
 
 def capture_image(filename):
@@ -121,11 +122,11 @@ def main():
     second = now.second
     filename = f'image-{hour}-{minute}-{second}.jpg'
     
-    capture_image(filename)
+    #capture_image(filename)
     path = os.path.join(root_dir, folder, filename)
 
     #upload_to_s3(filename, path)
-    get_environmental_data()
+    #get_environmental_data()
 
 
 main()
