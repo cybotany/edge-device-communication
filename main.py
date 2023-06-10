@@ -31,7 +31,7 @@ def post_to_web_server(ip_address, unique_id):
     url = config('URL')
 
     # Get JWT
-    token_response = requests.post(f'{url}/api/token/', data={
+    token_response = requests.post(f'{url}api/token/', data={
         'username': config('USERNAME'),
         'password': config('PASSWORD'),
     })
@@ -47,7 +47,7 @@ def post_to_web_server(ip_address, unique_id):
         'Authorization': f'Bearer {token}',
     }
 
-    response = requests.post(f'{url}/identify_cea/', headers=headers, data={
+    response = requests.post(f'{url}identify_cea/', headers=headers, data={
         'ip_address': ip_address,
         'identifier': unique_id,
     })
