@@ -56,7 +56,7 @@ def post_to_web_server(ip_address, unique_id):
         print("Raspberry Pi successfully registered.")
     else:
         print("Failed to register Raspberry Pi.")
-        print(response.text)
+        print(response.status_code)
 
 
 
