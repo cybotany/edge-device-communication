@@ -35,17 +35,14 @@ def post_to_web_server(ip_address, unique_id):
         'username': config('USERNAME'),
         'password': config('PASSWORD'),
     })
-    print(config('USERNAME'))
-    print(config('PASSWORD'))
-    print(token_response)
-    '''
+
     if token_response.status_code != 200:
         print("Failed to obtain JWT.")
-        print(token_response.text)
         return
 
     token = token_response.json().get('access')
-
+    print(token)
+    
     headers = {
         'Authorization': f'Bearer {token}',
     }
@@ -59,7 +56,7 @@ def post_to_web_server(ip_address, unique_id):
         print("Raspberry Pi successfully registered.")
     else:
         print("Failed to register Raspberry Pi.")
-        print(response.text)'''
+        print(response.text)
 
 
 
