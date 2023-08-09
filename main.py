@@ -1,7 +1,8 @@
 #!/usr/bin/env python
-
 import os
 from datetime import datetime
+import get_environmental_data
+import capture_image
 
 
 def main():
@@ -25,6 +26,8 @@ def main():
     filename = f'image-{hour}-{minute}-{second}.jpg'
 
     path = os.path.join(root_dir, folder, filename)
+    get_environmental_data()
+    capture_image(filename)
     return path
 
 main()

@@ -1,5 +1,6 @@
 import bme680
 
+
 def get_environmental_data():
     # Initialize BME680 sensor
     try:
