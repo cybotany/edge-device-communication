@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import os
 from datetime import datetime
-import get_environmental_data
-import capture_image
+from .environment_sensor import get_environmental_data
+from .camera import capture_image
 
 
 def main():
