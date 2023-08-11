@@ -1,6 +1,6 @@
 import bme680
 import time
-from utils.helpers import fahrenheit_to_celsius 
+from utils.helpers import celsius_to_fahrenheit 
 
 
 def get_environmental_data():
@@ -30,7 +30,7 @@ def get_environmental_data():
     # sensor.select_gas_heater_profile(1)
 
     c_temp = sensor.data.temperature
-    f_temp = fahrenheit_to_celsius(c_temp)
+    f_temp = celsius_to_fahrenheit(c_temp)
     pressure = sensor.data.pressure
     humidity = sensor.data.humidity
 
