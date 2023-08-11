@@ -27,7 +27,7 @@ def main():
 
     path = os.path.join(root_dir, folder, filename)
     get_environmental_data()
-    capture_image(filename)
-    return path
+    #capture_image(filename)
+    #return path
 
 main()
