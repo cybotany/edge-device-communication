@@ -1,4 +1,6 @@
 import bme680
+import time
+from utils.helpers import fahrenheit_to_celsius 
 
 
 def get_environmental_data():
@@ -16,8 +18,8 @@ def get_environmental_data():
     sensor.set_pressure_oversample(bme680.OS_4X)
     sensor.set_temperature_oversample(bme680.OS_8X)
     sensor.set_filter(bme680.FILTER_SIZE_3)
+    
     sensor.set_gas_status(bme680.ENABLE_GAS_MEAS)
-
     sensor.set_gas_heater_temperature(320)
     sensor.set_gas_heater_duration(150)
     sensor.select_gas_heater_profile(0)
@@ -27,14 +29,20 @@ def get_environmental_data():
     # sensor.set_gas_heater_profile(200, 150, nb_profile=1)
     # sensor.select_gas_heater_profile(1)
 
-    output = '{0:.2f} C,{1:.2f} hPa,{2:.2f} %RH'.format(
-        sensor.data.temperature,
-        sensor.data.pressure,
-        sensor.data.humidity)
+    c_temp = sensor.data.temperature
+    f_temp = fahrenheit_to_celsius(c_temp)
+    pressure = sensor.data.pressure
+    humidity = sensor.data.humidity
 
     if sensor.data.heat_stable:
-        print('{0},{1} Ohms'.format(
-            output,
-            sensor.data.gas_resistance))
+        gas_resistance = sensor.data.gas_resistance
     else:
-        print(output)
+        gas_resistance = 0
+    
+    output = '{0:.2f} F, {1:.2f} hPa, {2:.2f} %RH, {3:.2f} Ohms'.format(
+        f_temp,
+        pressure,
+        humidity,
+        gas_resistance)
+
+    print(output)
