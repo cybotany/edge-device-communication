@@ -9,7 +9,7 @@ async def main():
     print(p.alias)  # Print out the alias
     print(p.emeter_realtime)  # Print out current emeter status
 
-    await p.turn_off()  # Turn the device off
+    await p.turn_on()  # Turn the device off
 
 if __name__ == "__main__":
     asyncio.run(main())
