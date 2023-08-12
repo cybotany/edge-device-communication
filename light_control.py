@@ -7,9 +7,8 @@ async def main():
 
     await p.update()  # Request the update
     print(p.alias)  # Print out the alias
-    print(p.emeter_realtime)  # Print out current emeter status
 
-    await p.turn_on()  # Turn the device off
+    await p.turn_on()  # Turn the device on
 
 if __name__ == "__main__":
     asyncio.run(main())
