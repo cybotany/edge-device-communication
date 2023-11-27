@@ -1,2 +1,2 @@
-# cea
-Repository for smart CEA code
+# Digitizer
+Repository for digitizer code
