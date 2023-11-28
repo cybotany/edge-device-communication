@@ -1,2 +1,2 @@
-# Digitizer
-Repository for digitizer code
+# LinkMapper
+Repository for LinkMapper code
