@@ -23,9 +23,15 @@ if __name__ == '__main__':
                 last_uid = uid  # Update the last UID
                 if uid not in uid_list:
                     uid_list.append(uid)
-                    print('Found new card with UID:', [hex(i) for i in uid])
+                    print('Found new card. UID:', [hex(i) for i in uid])
+                    for i in range(30):
+                        try:
+                            print(i, ':', ' '.join(['%02X' % x
+                                for x in pn532.ntag2xx_read_block(i)]))
+                        except Exception as e:
+                            print(e)
                 else:
-                    print('Duplicate card detected. UID:', [hex(i) for i in uid])
+                    print('Found duplicate card. UID:', [hex(i) for i in uid])
     except Exception as e:
         print(e)
     finally:
