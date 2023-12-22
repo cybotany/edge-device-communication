@@ -26,7 +26,7 @@ while True:
         break
 print('Found card with UID:', [hex(i) for i in uid])
 
-# Now we try to go through all 135 pages of 4 bytes per page.
+# Now we try to go through all 30 pages of 4 bytes per page.
 for i in range(30):
     try:
         print(i, ':', ' '.join(['%02X' % x
