@@ -2,7 +2,6 @@
 This example shows connecting to the PN532 and reading an NTAG215
 type RFID tag
 """
-
 import RPi.GPIO as GPIO
 
 from pn532 import *
@@ -28,7 +27,7 @@ while True:
 print('Found card with UID:', [hex(i) for i in uid])
 
 # Now we try to go through all 135 pages of 4 bytes per page.
-for i in range(135):
+for i in range(30):
     try:
         print(i, ':', ' '.join(['%02X' % x
             for x in pn532.ntag2xx_read_block(i)]))
