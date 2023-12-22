@@ -30,7 +30,7 @@ if __name__ == '__main__':
             # Try again if no card is available.
             if uid is None:
                 continue
-            print('Found card with UID:', [i for i in uid])
+            print('Found card with UID:', [hex(i) for i in uid])
     except Exception as e:
         print(e)
     finally:
