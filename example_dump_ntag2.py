@@ -4,6 +4,8 @@ type RFID tag
 """
 
 import RPi.GPIO as GPIO
+
+import pn532.pn532 as nfc
 from pn532 import *
 
 pn532 = PN532_SPI(cs=4, reset=20, debug=False)
@@ -26,12 +28,12 @@ while True:
         break
 print('Found card with UID:', [hex(i) for i in uid])
 
-# Now we try to go through 5 pages of 4 bytes per page.
-for i in range(5):
+# Now we try to go through all 135 pages of 4 bytes per page.
+for i in range(135):
     try:
         print(i, ':', ' '.join(['%02X' % x
             for x in pn532.ntag2xx_read_block(i)]))
-    except pn532.PN532Error as e:
+    except nfc.PN532Error as e:
         print(e.errmsg)
         break
 GPIO.cleanup()
