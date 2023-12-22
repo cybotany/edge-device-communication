@@ -34,6 +34,6 @@ try:
     pn532.ntag2xx_write_block(block_number, data)
     if pn532.ntag2xx_read_block(block_number) == data:
         print('write block %d successfully' % block_number)
-except pn532.PN532Error as e:
-    print(e.errmsg)
+except Exception as e:
+    print(e)
 GPIO.cleanup()

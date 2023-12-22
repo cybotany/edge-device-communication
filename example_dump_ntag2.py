@@ -5,7 +5,6 @@ type RFID tag
 
 import RPi.GPIO as GPIO
 
-import pn532.pn532 as nfc
 from pn532 import *
 
 pn532 = PN532_SPI(cs=4, reset=20, debug=False)
@@ -33,7 +32,8 @@ for i in range(135):
     try:
         print(i, ':', ' '.join(['%02X' % x
             for x in pn532.ntag2xx_read_block(i)]))
-    except nfc.PN532Error as e:
-        print(e.errmsg)
+    except Exception as e:
+        print(e)
+        GPIO.cleanup()
         break
 GPIO.cleanup()
