@@ -34,6 +34,5 @@ for i in range(135):
             for x in pn532.ntag2xx_read_block(i)]))
     except Exception as e:
         print(e)
-        GPIO.cleanup()
         break
 GPIO.cleanup()
