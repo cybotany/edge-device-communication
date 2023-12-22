@@ -4,8 +4,6 @@ type RFID tag
 """
 import RPi.GPIO as GPIO
 
-import pn532.pn532 as nfc
-
 from pn532 import *
 
 pn532 = PN532_SPI(debug=False, reset=20, cs=4)
@@ -36,6 +34,6 @@ try:
     pn532.ntag2xx_write_block(block_number, data)
     if pn532.ntag2xx_read_block(block_number) == data:
         print('write block %d successfully' % block_number)
-except nfc.PN532Error as e:
+except pn532.PN532Error as e:
     print(e.errmsg)
 GPIO.cleanup()
