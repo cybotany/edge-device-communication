@@ -6,6 +6,28 @@ def extract_uid(pages):
     # UID is the first 7 bytes of the combined pages
     return pages[:7]
 
+def write_url_with_ascii_mirror(pn532, uid, env='development'):
+    """ Write the base URL and configure ASCII mirror function. """
+    
+    if env == 'production':
+        base_url = "https://www.digidex.app/link/"
+    else:
+        base_url = "http://localhost:8080/link/"
+    # Assuming the URL starts at page 4 and ends at page 9 (to be adjusted based on actual length)
+    url_pages = [base_url[i:i+4] for i in range(0, len(base_url), 4)]
+
+    try:
+        # Write the URL to the tag
+        for i, page_data in enumerate(url_pages, start=4):
+            pn532.ntag2xx_write_block(i, [ord(c) for c in page_data])
+
+        # Additional code to configure ASCII mirror function goes here
+        # This involves setting MIRROR_PAGE and MIRROR_BYTE to the appropriate values
+        # The exact method to do this will depend on the capabilities of the pn532 library
+
+    except Exception as e:
+        print("Error writing to tag:", e)
+
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=False, reset=20, cs=4)
@@ -27,11 +49,10 @@ if __name__ == '__main__':
             if uid != last_uid:
                 last_uid = uid
                 try:
-                    # Read the first 3 blocks (9 bytes)
                     page0 = pn532.ntag2xx_read_block(0)
                     page1 = pn532.ntag2xx_read_block(1)
                     page2 = pn532.ntag2xx_read_block(2)
-                    combined_pages = page0 + page1 + page2[:1]  # First 9 bytes
+                    combined_pages = page0 + page1 + page2[:1]
 
                     extracted_uid = extract_uid(combined_pages)
                     uid_hex = [hex(i) for i in extracted_uid]
@@ -39,6 +60,7 @@ if __name__ == '__main__':
                     if uid_hex not in uid_list:
                         uid_list.append(uid_hex)
                         print('Found new card. Extracted UID:', uid_hex)
+                        write_url_with_ascii_mirror(pn532, uid)
                     else:
                         print('Found duplicate card. Extracted UID:', uid_hex)
                 except Exception as e:
