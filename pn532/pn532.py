@@ -25,13 +25,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """
-``pn532-nfc-hat``
-====================================================
-
 This module will let you communicate with a PN532 NFC Hat using I2C, SPI or UART.
 The main difference is the interfaces implements.
 """
-
 import RPi.GPIO as GPIO
 
 
@@ -83,18 +79,19 @@ _RESPONSE_INLISTPASSIVETARGET  = 0x4B
 
 _WAKEUP                        = 0x55
 
-_MIFARE_ISO14443A              = 0x00
+_ISO14443A              = 0x00
 
-# Mifare Commands
-MIFARE_CMD_AUTH_A                   = 0x60
-MIFARE_CMD_AUTH_B                   = 0x61
-MIFARE_CMD_READ                     = 0x30
-MIFARE_CMD_WRITE                    = 0xA0
-MIFARE_CMD_TRANSFER                 = 0xB0
-MIFARE_CMD_DECREMENT                = 0xC0
-MIFARE_CMD_INCREMENT                = 0xC1
-MIFARE_CMD_STORE                    = 0xC2
-MIFARE_ULTRALIGHT_CMD_WRITE         = 0xA2
+# NTAG Commands
+NTAG_CMD_GET_VERSION                = 0x60
+NTAG_CMD_READ                       = 0x30
+NTAG_CMD_FAST_READ                  = 0x3A
+NTAG_CMD_WRITE                      = 0xA2
+NTAG_CMD_COMPATIBILITY_WRITE        = 0xA0
+NTAG_CMD_READ_CNT                   = 0x39
+NTAG_ADDR_READ_CNT                  = 0x39 # 02h
+NTAG_CMD_PWD_AUTH                   = 0x1B
+NTAG_CMD_READ_SIG                   = 0x3C
+NTAG_ADDR_READ_SIG                  = 0x3C # 00h
 
 # Prefixes for NDEF Records (to identify record type)
 NDEF_URIPREFIX_NONE                 = 0x00
@@ -253,7 +250,7 @@ class PN532:
         checksum += sum(data)
         frame[-2] = ~checksum & 0xFF
         frame[-1] = _POSTAMBLE
-        # Send frame.
+        # Send frame
         if self.debug:
             print('Write frame: ', [hex(i) for i in frame])
         self._write_data(bytes(frame))
@@ -338,21 +335,23 @@ class PN532:
         return tuple(response)
 
     def SAM_configuration(self):   # pylint: disable=invalid-name
-        """Configure the PN532 to read MiFare cards."""
-        # Send SAM configuration command with configuration for:
-        # - 0x01, normal mode
-        # - 0x14, timeout 50ms * 20 = 1 second
-        # - 0x01, use IRQ pin
-        # Note that no other verification is necessary as call_function will
-        # check the command was executed as expected.
+        """
+        Configure the PN532 to read NTAG2xx cards. Send SAM configuration
+        command with configuration for:
+          - 0x01, normal mode
+          - 0x14, timeout 50ms * 20 = 1 second
+          - 0x01, use IRQ pin
+        Note that no other verification is necessary as call_function will
+        check the command was executed as expected.
+        """
         self.call_function(_COMMAND_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
 
-    def read_passive_target(self, card_baud=_MIFARE_ISO14443A, timeout=1):
-        """Wait for a MiFare card to be available and return its UID when found.
+    def read_passive_target(self, card_baud=_ISO14443A, timeout=1):
+        """
+        Wait for an NTAG to be available and return its UID when found.
         Will wait up to timeout seconds and return None if no card is found,
         otherwise a bytearray with the UID of the found card is returned.
         """
-        # Send passive read command for 1 card.  Expect at most a 7 byte UUID.
         try:
             response = self.call_function(_COMMAND_INLISTPASSIVETARGET,
                                           params=[0x01, card_baud],
@@ -371,69 +370,6 @@ class PN532:
         # Return UID of card.
         return response[6:6+response[5]]
 
-    def mifare_classic_authenticate_block(self, uid, block_number, key_number, key):   # pylint: disable=invalid-name
-        """Authenticate specified block number for a MiFare classic card.  Uid
-        should be a byte array with the UID of the card, block number should be
-        the block to authenticate, key number should be the key type (like
-        MIFARE_CMD_AUTH_A or MIFARE_CMD_AUTH_B), and key should be a byte array
-        with the key data.  Returns True if the block was authenticated, or False
-        if not authenticated.
-        """
-        # Build parameters for InDataExchange command to authenticate MiFare card.
-        uidlen = len(uid)
-        keylen = len(key)
-        params = bytearray(3+uidlen+keylen)
-        params[0] = 0x01  # Max card numbers
-        params[1] = key_number & 0xFF
-        params[2] = block_number & 0xFF
-        params[3:3+keylen] = key
-        params[3+keylen:] = uid
-        # Send InDataExchange request and verify response is 0x00.
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
-                                      params=params,
-                                      response_length=1)
-        if response[0]:
-            raise PN532Error(response[0])
-        return response[0] == 0x00
-
-    def mifare_classic_read_block(self, block_number):
-        """Read a block of data from the card.  Block number should be the block
-        to read.  If the block is successfully read a bytearray of length 16 with
-        data starting at the specified block will be returned.  If the block is
-        not read then None will be returned.
-        """
-        # Send InDataExchange request to read block of MiFare data.
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
-                                      params=[0x01, MIFARE_CMD_READ, block_number & 0xFF],
-                                      response_length=17)
-        # Check first response is 0x00 to show success.
-        if response[0]:
-            raise PN532Error(response[0])
-            return None
-        # Return first 4 bytes since 16 bytes are always returned.
-        return response[1:]
-
-    def mifare_classic_write_block(self, block_number, data):
-        """Write a block of data to the card.  Block number should be the block
-        to write and data should be a byte array of length 16 with the data to
-        write.  If the data is successfully written then True is returned,
-        otherwise False is returned.
-        """
-        assert data is not None and len(data) == 16, 'Data must be an array of 16 bytes!'
-        # Build parameters for InDataExchange command to do MiFare classic write.
-        params = bytearray(19)
-        params[0] = 0x01  # Max card numbers
-        params[1] = MIFARE_CMD_WRITE
-        params[2] = block_number & 0xFF
-        params[3:] = data
-        # Send InDataExchange request.
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
-                                      params=params,
-                                      response_length=1)
-        if response[0]:
-            raise PN532Error(response[0])
-        return response[0] == 0x0
-
     def ntag2xx_write_block(self, block_number, data):
         """Write a block of data to the card.  Block number should be the block
         to write and data should be a byte array of length 4 with the data to
@@ -444,7 +380,7 @@ class PN532:
         # Build parameters for InDataExchange command to do NTAG203 classic write.
         params = bytearray(3+len(data))
         params[0] = 0x01  # Max card numbers
-        params[1] = MIFARE_ULTRALIGHT_CMD_WRITE
+        params[1] = NTAG_CMD_WRITE
         params[2] = block_number & 0xFF
         params[3:] = data
         # Send InDataExchange request.
@@ -456,12 +392,53 @@ class PN532:
         return response[0] == 0x00
 
     def ntag2xx_read_block(self, block_number):
-        """Read a block of data from the card.  Block number should be the block
-        to read.  If the block is successfully read a bytearray of length 16 with
-        data starting at the specified block will be returned.  If the block is
+
+        """
+        Read a block of data from the card.  Block number should be the block
+        to read. If the block is successfully read a bytearray of length 16 with
+        data starting at the specified block will be returned. If the block is
         not read then None will be returned.
         """
-        return self.mifare_classic_read_block(block_number)[0:4] # only 4 bytes per page
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_READ, block_number & 0xFF],
+                                      response_length=17)
+        # Check first response is 0x00 to show success.
+        if response[0]:
+            raise PN532Error(response[0])
+        # Return first 4 bytes since 16 bytes are always returned.
+        return response[1:][0:4]
+
+    def ntag2xx_create_record(self, tnf, record_type, payload):
+        """
+        Create an NDEF record.
+        :param tnf: Type Name Format for the record
+        :param record_type: Type of the record (e.g., URI, Text)
+        :param payload: Data to store in the record
+        :return: NDEF record as a byte array
+        """
+        ndef_record = bytearray()
+        ndef_record.append(tnf)
+        ndef_record.extend(record_type.encode('utf-8'))
+        ndef_record.extend(payload.encode('utf-8'))
+        return ndef_record
+
+    def ntag2xx_write_record(self, ndef_record, start_block=4):
+        """
+        Write an NDEF record to an NTAG2XX NFC tag.
+        :param ndef_record: NDEF record as a byte array
+        :param start_block: Starting block number to write the record
+        :return: True if write is successful, False otherwise
+        """
+        try:
+            for i in range(0, len(ndef_record), 4):
+                block_data = ndef_record[i:i + 4]
+                if len(block_data) < 4:
+                    block_data += b'\x00' * (4 - len(block_data))  # Padding
+                self.ntag2xx_write_block(start_block + i // 4, block_data)
+            return True
+        except Exception as e:
+            print("Error writing NDEF record to the tag:", e)
+            return False
 
     def read_gpio(self, pin=None):
         """Read the state of the PN532's GPIO pins.
@@ -535,60 +512,3 @@ class PN532:
                     params[1] = 0x80 | p7 & ~(1 << int(pin[-1])) & 0xFF
                 params[0] = 0x00    # leave p3 unchanged
             self.call_function(_COMMAND_WRITEGPIO, params=params)
-
-    def tg_init_as_target(self,
-        mode,
-        mifare_params=None,
-        felica_params=None,
-        nfcid3t=None,
-        gt=None,
-        tk=None,
-        timeout=60
-    ):
-        """The host controller uses this command to configure the PN532 as
-        target.
-        :params mode: a byte indicating which mode the PN532 should respect.
-        :params mifare_params: information needed to be able to be
-        activated at 106 kbps in passive mode.
-        :params felica_params: information to be able to respond to a polling
-        request at 212/424 kbps in passive mode.
-        :params nfcid3t: used in the ATR_RES in case of ATR_REQ received from
-        the initiator
-        :params gt: an array containing the general bytes to be used in the
-        ATR_RES. This information is optional and the length is not fixed
-        (max. 47 bytes),
-        :params tk: an array containing the historical bytes to be used in the
-        ATS when PN532 is in ISO/IEC14443-4 PICC emulation mode. This
-        information is optional.
-        :returns mode: a byte indicating in which mode the PN532 has been
-        activated.
-        :returns initiator_command: an array containing the first valid frame
-        received by the PN532 once the PN532 has been initialized.
-        """
-        if not mifare_params:
-            mifare_params = [0] * 6
-        if not felica_params:
-            felica_params = [0] * 18
-        if not nfcid3t:
-            nfcid3t = [0] * 10
-        params = []
-        params.append(mode)
-        params += mifare_params
-        params += felica_params
-        params += nfcid3t
-        if gt:
-            params.append(len(gt))
-            params += gt
-        else:
-            params.append(0x00)
-        if tk:
-            params.append(len(tk))
-            params += tk
-        else:
-            params.append(0x00)
-        # Try to read 64 bytes although the response length is not fixed
-        response = self.call_function(_COMMAND_TGINITASTARGET, 64, params=params, timeout=timeout)
-        if response:
-            mode_activated = response[0]
-            initiator_command = response[1:]
-            return (mode_activated, initiator_command)
