@@ -251,7 +251,7 @@ class PN532:
         Write a frame to the PN532.
         """
         self._validate_data_length(data, 255)
-        frame = self._build_frame(data)
+        frame = self._handle_frame(data, operation='build')
         self._write_data(bytes(frame))
 
     def _read_frame(self, length):
@@ -259,7 +259,7 @@ class PN532:
         Read a response frame from the PN532.
         """
         response = self._read_data(length + 7)
-        return self._parse_frame(response, length)
+        return self._handle_frame(response, operation='parse')
 
     def _validate_data_length(self, data, length=255):
         """
