@@ -396,7 +396,7 @@ class PN532:
         :return: Tuple with version information or None if no response.
         """
         response = self._call_function(_COMMAND_INDATAEXCHANGE,
-                                       params=[0x01, NTAG_CMD_GET_VERSION],
+                                       params=[NTAG_CMD_GET_VERSION],
                                        response_length=8,
                                        timeout=1)
         if response is None or len(response) < 8:
