@@ -328,7 +328,8 @@ class PN532:
         data = bytearray(2 + len(params))
         data[0] = _HOSTTOPN532
         data[1] = command & 0xFF
-        data[2:] = params
+        for i, val in enumerate(params):
+            data[2+i] = val
         return data
 
     def _wait_for_ack(self, timeout):
@@ -361,7 +362,11 @@ class PN532:
         Send specified command to the PN532
         """
         data = self._prepare_command_data(command, params)
-        self._write_frame(data)
+        try:
+            self._write_frame(data)
+        except OSError:
+            self._wakeup()
+            return None
         if not self._wait_for_ack(timeout):
             return None
         return self._read_and_check_response(command, response_length, timeout)
