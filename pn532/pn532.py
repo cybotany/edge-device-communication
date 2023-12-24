@@ -282,23 +282,24 @@ class PN532:
             frame[-1] = _POSTAMBLE
             return frame
         elif operation == 'parse':
+            response = self._read_data(length + 7)
             offset = 0
-            while data[offset] == 0x00:
+            while response[offset] == 0x00:
                 offset += 1
-                if offset >= len(data):
+                if offset >= len(response):
                     raise RuntimeError('Response frame preamble does not contain 0x00FF!')
-            if data[offset] != 0xFF:
+            if response[offset] != 0xFF:
                 raise RuntimeError('Response frame preamble does not contain 0x00FF!')
             offset += 1
-            if offset >= len(data):
+            if offset >= len(response):
                 raise RuntimeError('Response contains no data!')
-            frame_len = data[offset]
-            if (frame_len + data[offset+1]) & 0xFF != 0:
+            frame_len = response[offset]
+            if (frame_len + response[offset+1]) & 0xFF != 0:
                 raise RuntimeError('Response length checksum did not match length!')
-            checksum = sum(data[offset+2:offset+2+frame_len+1]) & 0xFF
+            checksum = sum(response[offset+2:offset+2+frame_len+1]) & 0xFF
             if checksum != 0:
                 raise RuntimeError('Response checksum did not match expected value.')
-            parsed_data =  data[offset+2:offset+2+frame_len]
+            parsed_data =  response[offset+2:offset+2+frame_len]
             return parsed_data
 
     def _write_frame(self, data):
@@ -316,23 +317,6 @@ class PN532:
         response = self._read_data(length + 7)
         return self._handle_frame(response, operation='parse')
 
-    def _prepare_command_data(self, command, params=None):
-        """
-        Prepare data for sending a command.
-
-        :param command: The command byte.
-        :param params: Optional parameters for the command.
-        :return: Prepared data as bytearray.
-        """
-        if params is None:
-            params = []
-        data = bytearray(2 + len(params))
-        data[0] = _HOSTTOPN532
-        data[1] = command & 0xFF
-        for i, val in enumerate(params):
-            data[2+i] = val
-        return data
-
     def _wait_for_ack(self, timeout):
         """
         Wait for an ACK response within the given timeout.
@@ -347,20 +331,18 @@ class PN532:
                 return True
         return False
 
-    def _read_response(self, command, response_length, timeout):
-        """
-        Read the response for a command
-        """
-        if not self._wait_ready(timeout):
-            return None
-        response = self._read_frame(response_length + 2)
-        return response[2:]
-
     def _call_function(self, command, response_length=0, params=None, timeout=1):
         """
         Send specified command to the PN532
         """
-        data = self._prepare_command_data(command, params)
+        if params is None:
+            params = []
+        data = bytearray(2 + len(params))
+        data[0] = _HOSTTOPN532
+        data[1] = command & 0xFF
+        for i, val in enumerate(params):
+            data[2+i] = val
+        data
         try:
             self._write_frame(data)
         except OSError:
@@ -368,7 +350,10 @@ class PN532:
             return None
         if not self._wait_for_ack(timeout):
             return None
-        return self._read_response(command, response_length, timeout)
+        if not self._wait_ready(timeout):
+            return None
+        response = self._read_frame(response_length + 2)
+        return response[2:]
 
     def SAM_configuration(self):
         """
@@ -396,13 +381,13 @@ class PN532:
         :return: Tuple with version information or None if no response.
         """
         response = self._call_function(_COMMAND_INDATAEXCHANGE,
-                                       params=[NTAG_CMD_GET_VERSION],
+                                       params=[0x01, NTAG_CMD_GET_VERSION & 0xFF],
                                        response_length=8,
                                        timeout=1)
-        if response is None: #  or len(response) < 8
-            print("Failed to get version information or invalid response.")
+        if response[0]:
+            raise PN532Error(response[0])
             return None
-        return tuple(response)
+        return response[1:]
 
     def ntag2xx_read(self, start_page):
         """
@@ -472,60 +457,3 @@ class PN532:
             raise PN532Error(response[0])
         return response[1:]
 
-    def ntag2xx_write_block(self, block_number, data):
-        """
-        Write a block of data to the card.
-        """
-        self._validate_data_length(data, 4)
-        response = self._call_function(_COMMAND_INDATAEXCHANGE,
-                                      params=[0x01, NTAG_CMD_WRITE, block_number & 0xFF, data],
-                                      response_length=1)
-        if response[0]:
-            raise PN532Error(response[0])
-        return response[0] == 0x00
-
-    def ntag2xx_read_block(self, block_number):
-        """
-        Read a block of data from the card.
-        """
-        response = self._call_function(_COMMAND_INDATAEXCHANGE,
-                                      params=[0x01, NTAG_CMD_READ, block_number & 0xFF],
-                                      response_length=17)
-        if response[0]:
-            raise PN532Error(response[0])
-        # Return first 4 bytes since 16 bytes are returned.
-        return response[1:][0:4]
-
-    def ntag2xx_create_record(self, tnf, record_type, payload):
-        """
-        Create an NDEF record.
-
-        :param tnf: Type Name Format for the record
-        :param record_type: Type of the record (e.g., URI, Text)
-        :param payload: Data to store in the record
-        :return: NDEF record as a byte array
-        """
-        ndef_record = bytearray()
-        ndef_record.append(tnf)
-        ndef_record.extend(record_type.encode('utf-8'))
-        ndef_record.extend(payload.encode('utf-8'))
-        return ndef_record
-
-    def ntag2xx_write_record(self, ndef_record, start_block=4):
-        """
-        Write an NDEF record to an NTAG2XX NFC tag.
-
-        :param ndef_record: NDEF record as a byte array
-        :param start_block: Starting block number to write the record
-        :return: True if write is successful, False otherwise
-        """
-        try:
-            for i in range(0, len(ndef_record), 4):
-                block_data = ndef_record[i:i + 4]
-                if len(block_data) < 4:
-                    block_data += b'\x00' * (4 - len(block_data))  # Padding
-                self.ntag2xx_write_block(start_block + i // 4, block_data)
-            return True
-        except Exception as e:
-            print("Error writing NDEF record to the tag:", e)
-            return False
