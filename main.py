@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 from pn532 import *
- 
+
 def extract_uid(pages):
     """
     Extract the 7-byte UID from the first 9 bytes of memory.
@@ -10,6 +10,9 @@ def extract_uid(pages):
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=False, reset=20, cs=4)
+        #pn532 = PN532_I2C(debug=False, reset=20, req=16)
+        #pn532 = PN532_UART(debug=False, reset=20)
+
         pn532.SAM_configuration()
 
         print('Waiting for RFID/NFC card...')
@@ -34,6 +37,10 @@ if __name__ == '__main__':
                     if uid_hex not in uid_list:
                         uid_list.append(uid_hex)
                         print('Found new card. Extracted UID:', uid_hex)
+
+                        version_info = pn532.ntag2xx_get_version()
+                        print('NTAG Version Information:', version_info)
+
                     else:
                         print('Found duplicate card. Extracted UID:', uid_hex)
                 except Exception as e:
