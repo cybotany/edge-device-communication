@@ -267,8 +267,8 @@ class PN532:
         :param operation: 'build' for building a frame, 'parse' for parsing.
         :return: Constructed or parsed frame.
         """
+        length = len(data)
         if operation == 'build':
-            length = len(data)
             frame = bytearray(length + 7)
             frame[0] = _PREAMBLE
             frame[1] = _STARTCODE1
