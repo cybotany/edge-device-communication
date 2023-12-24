@@ -38,8 +38,8 @@ if __name__ == '__main__':
                         uid_list.append(uid_hex)
                         print('Found new card. Extracted UID:', uid_hex)
 
-                        version_info = pn532.ntag2xx_get_version()
-                        print('NTAG Version Information:', version_info)
+                        #version_info = pn532.ntag2xx_get_version()
+                        #print('NTAG Version Information:', version_info)
 
                     else:
                         print('Found duplicate card. Extracted UID:', uid_hex)
