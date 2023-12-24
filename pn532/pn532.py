@@ -198,7 +198,7 @@ class PN532:
         """
         Retrieve the firmware version from the PN532.
         """
-        response = self.call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
+        response = self._call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
         if response is None:
             raise RuntimeError('Failed to detect the PN532')
         return tuple(response)
@@ -246,21 +246,6 @@ class PN532:
         """
         raise NotImplementedError
 
-    def _write_frame(self, data):
-        """
-        Write a frame to the PN532.
-        """
-        self._validate_data_length(data, 255)
-        frame = self._handle_frame(data, operation='build')
-        self._write_data(bytes(frame))
-
-    def _read_frame(self, length):
-        """
-        Read a response frame from the PN532.
-        """
-        response = self._read_data(length + 7)
-        return self._handle_frame(response, operation='parse')
-
     def _validate_data_length(self, data, length=255):
         """
         Validate the length of the data to be sent.
@@ -283,6 +268,16 @@ class PN532:
         if operation == 'build':
             length = len(data)
             frame = bytearray(length + 7)
+            frame[0] = _PREAMBLE
+            frame[1] = _STARTCODE1
+            frame[2] = _STARTCODE2
+            checksum = sum(frame[0:3])
+            frame[3] = length & 0xFF
+            frame[4] = (~length + 1) & 0xFF
+            frame[5:-2] = data
+            checksum += sum(data)
+            frame[-2] = ~checksum & 0xFF
+            frame[-1] = _POSTAMBLE
             return frame
         elif operation == 'parse':
             offset = 0
@@ -303,6 +298,21 @@ class PN532:
                 raise RuntimeError('Response checksum did not match expected value.')
             parsed_data =  data[offset+2:offset+2+frame_len]
             return parsed_data
+
+    def _write_frame(self, data):
+        """
+        Write a frame to the PN532.
+        """
+        self._validate_data_length(data, 255)
+        frame = self._handle_frame(data, operation='build')
+        self._write_data(bytes(frame))
+
+    def _read_frame(self, length):
+        """
+        Read a response frame from the PN532.
+        """
+        response = self._read_data(length + 7)
+        return self._handle_frame(response, operation='parse')
 
     def _prepare_command_data(self, command, params=None):
         """
@@ -346,7 +356,7 @@ class PN532:
             raise RuntimeError('Unexpected command response')
         return response[2:]
 
-    def call_function(self, command, response_length=0, params=None, timeout=1):
+    def _call_function(self, command, response_length=0, params=None, timeout=1):
         """
         Send specified command to the PN532
         """
@@ -364,13 +374,13 @@ class PN532:
         """
         Configure the PN532 for NTAG2xx reading.
         """
-        self.call_function(_COMMAND_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
+        self._call_function(_COMMAND_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
 
     def read_passive_target(self, card_baud=_ISO14443A, timeout=1):
         """
         Wait for an NTAG to be available and return its UID when found.
         """
-        response = self.call_function(_COMMAND_INLISTPASSIVETARGET, params=[0x01, card_baud], response_length=19, timeout=timeout)
+        response = self._call_function(_COMMAND_INLISTPASSIVETARGET, params=[0x01, card_baud], response_length=19, timeout=timeout)
         if not response or response[0] != 0x01 or response[5] > 7:
             return None
         return response[6:6 + response[5]]
@@ -382,7 +392,7 @@ class PN532:
         :return: Tuple with version information or None if no response.
         """
         command = [NTAG_CMD_GET_VERSION]
-        response = self.call_function(_COMMAND_INDATAEXCHANGE, params=command, response_length=8, timeout=1)
+        response = self._call_function(_COMMAND_INDATAEXCHANGE, params=command, response_length=8, timeout=1)
         if response is None or len(response) < 8:
             print("Failed to get version information or invalid response.")
             return None
@@ -392,7 +402,7 @@ class PN532:
         """
         Read 16 bytes from the specified start page.
         """
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_READ, start_page & 0xFF],
                                       response_length=20)
         if response[0]:
@@ -403,7 +413,7 @@ class PN532:
         """
         Read consecutive pages from start_page to end_page.
         """
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_FAST_READ, start_page & 0xFF, end_page & 0xFF],
                                       response_length=(end_page - start_page + 1) * 4 + 2)
         if response[0]:
@@ -415,7 +425,7 @@ class PN532:
         Write 4 bytes to a specific page using Compatibility Write.
         """
         self._validate_data_length(data, 4)
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_COMPATIBILITY_WRITE, page & 0xFF] + list(data),
                                       response_length=1)
         if response[0]:
@@ -426,7 +436,7 @@ class PN532:
         """
         Read the NTAG NFC counter value.
         """
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_READ_CNT, NTAG_ADDR_READ_CNT],
                                       response_length=4)
         if response[0]:
@@ -438,7 +448,7 @@ class PN532:
         Authenticate with the NTAG using a password.
         """
         self._validate_data_length(password, 4)
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_PWD_AUTH] + list(password),
                                       response_length=2)
         if response[0]:
@@ -449,7 +459,7 @@ class PN532:
         """
         Read the NTAG signature.
         """
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_READ_SIG, NTAG_ADDR_READ_SIG],
                                       response_length=34)
         if response[0]:
@@ -461,7 +471,7 @@ class PN532:
         Write a block of data to the card.
         """
         self._validate_data_length(data, 4)
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_WRITE, block_number & 0xFF, data],
                                       response_length=1)
         if response[0]:
@@ -472,7 +482,7 @@ class PN532:
         """
         Read a block of data from the card.
         """
-        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_READ, block_number & 0xFF],
                                       response_length=17)
         if response[0]:
