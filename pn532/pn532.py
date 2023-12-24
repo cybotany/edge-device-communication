@@ -399,7 +399,7 @@ class PN532:
                                        params=[NTAG_CMD_GET_VERSION],
                                        response_length=8,
                                        timeout=1)
-        if response is None or len(response) < 8:
+        if response is None: #  or len(response) < 8
             print("Failed to get version information or invalid response.")
             return None
         return tuple(response)
