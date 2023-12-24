@@ -267,8 +267,8 @@ class PN532:
         :param operation: 'build' for building a frame, 'parse' for parsing.
         :return: Constructed or parsed frame.
         """
-        length = len(data)
         if operation == 'build':
+            length = len(data)
             frame = bytearray(length + 7)
             frame[0] = _PREAMBLE
             frame[1] = _STARTCODE1
@@ -282,24 +282,23 @@ class PN532:
             frame[-1] = _POSTAMBLE
             return frame
         elif operation == 'parse':
-            response = self._read_data(length + 7)
             offset = 0
-            while response[offset] == 0x00:
+            while data[offset] == 0x00:
                 offset += 1
-                if offset >= len(response):
+                if offset >= len(data):
                     raise RuntimeError('Response frame preamble does not contain 0x00FF!')
-            if response[offset] != 0xFF:
+            if data[offset] != 0xFF:
                 raise RuntimeError('Response frame preamble does not contain 0x00FF!')
             offset += 1
-            if offset >= len(response):
+            if offset >= len(data):
                 raise RuntimeError('Response contains no data!')
-            frame_len = response[offset]
-            if (frame_len + response[offset+1]) & 0xFF != 0:
+            frame_len = data[offset]
+            if (frame_len + data[offset+1]) & 0xFF != 0:
                 raise RuntimeError('Response length checksum did not match length!')
-            checksum = sum(response[offset+2:offset+2+frame_len+1]) & 0xFF
+            checksum = sum(data[offset+2:offset+2+frame_len+1]) & 0xFF
             if checksum != 0:
                 raise RuntimeError('Response checksum did not match expected value.')
-            parsed_data =  response[offset+2:offset+2+frame_len]
+            parsed_data =  data[offset+2:offset+2+frame_len]
             return parsed_data
 
     def _write_frame(self, data):
