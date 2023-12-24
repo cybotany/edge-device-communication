@@ -197,18 +197,22 @@ class PN532:
     def _get_firmware_version(self):
         """
         Retrieve the firmware version from the PN532.
+        Retry a few times in case of transient issues.
         """
-        try:
-            response = self.call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
-            if not response:
+        retry_count = 3
+        for attempt in range(retry_count):
+            try:
+                response = self.call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
+                if response:
+                    return tuple(response)
                 if self.debug:
-                    print("No response from PN532")
-                raise RuntimeError('Failed to detect the PN532')
-            return tuple(response)
-        except Exception as e:
-            if self.debug:
-                print("Exception in _get_firmware_version:", e)
-            raise
+                    print(f"No response in attempt {attempt + 1}/{retry_count}")
+            except Exception as e:
+                if self.debug:
+                    print(f"Exception in attempt {attempt + 1}/{retry_count}: {e}")
+            time.sleep(0.5)
+
+        raise RuntimeError('Failed to detect the PN532 after multiple attempts')
 
     def _initialize(self):
         """
