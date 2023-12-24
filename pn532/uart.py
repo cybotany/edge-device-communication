@@ -28,29 +28,27 @@
 This module will let you communicate with a PN532 RFID/NFC chip
 using UART (ttyS0) on the Raspberry Pi.
 """
-
-
 import time
 import serial
 import RPi.GPIO as GPIO
 from .pn532 import PN532, BusyError
 
-
-# pylint: disable=bad-whitespace
 DEV_SERIAL          = '/dev/ttyS0'
 BAUD_RATE           = 115200
 
 
 class PN532_UART(PN532):
-    """Driver for the PN532 connected over UART. Pass in a hardware UART device.
+    """
+    Driver for the PN532 connected over UART. Pass in a hardware UART device.
     Optional IRQ pin (not used), reset pin and debugging output. 
     """
     def __init__(self, dev=DEV_SERIAL, baudrate=BAUD_RATE,
                 irq=None, reset=None, debug=False):
-        """Create an instance of the PN532 class using UART
-        before running __init__, you should
-        1.  disable serial login shell
-        2.  enable serial port hardware
+        """
+        Create an instance of the PN532 class using UART
+        before running __init__, you should:
+         - disable serial login shell
+         - enable serial port hardware
         using 'sudo raspi-config' --> 'Interfacing Options' --> 'Serial'
         """
 
@@ -71,7 +69,9 @@ class PN532_UART(PN532):
             GPIO.setup(irq, GPIO.IN)
 
     def _reset(self, pin):
-        """Perform a hardware reset toggle"""
+        """
+        Perform a hardware reset toggle
+        """
         GPIO.output(pin, True)
         time.sleep(0.1)
         GPIO.output(pin, False)
@@ -80,23 +80,28 @@ class PN532_UART(PN532):
         time.sleep(0.1)
 
     def _wakeup(self):
-        """Send any special commands/data to wake up PN532"""
-        self._uart.write(b'\x55\x55\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00') # wake up!
+        """
+        Send any special commands/data to wake up PN532
+        """
+        self._uart.write(b'\x55\x55\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         self.SAM_configuration()
 
     def _wait_ready(self, timeout=0.001):
-        """Wait for response frame, up to `timeout` seconds"""
+        """
+        Wait for response frame, up to `timeout` seconds
+        """
         timestamp = time.monotonic()
         while (time.monotonic() - timestamp) < timeout:
             if self._uart.in_waiting:
                 return True
             else:
-                time.sleep(0.05)  # lets ask again soon!
-        # Timed out!
+                time.sleep(0.05)
         return False
 
     def _read_data(self, count):
-        """Read a specified count of bytes from the PN532."""
+        """
+        Read a specified count of bytes from the PN532.
+        """
         frame = self._uart.read(min(self._uart.in_waiting, count))
         if not frame:
             raise BusyError("No data read from PN532")
@@ -107,6 +112,8 @@ class PN532_UART(PN532):
         return frame
 
     def _write_data(self, framebytes):
-        """Write a specified count of bytes to the PN532"""
-        self._uart.read(self._uart.in_waiting)    # clear FIFO queue of UART
+        """
+        Write a specified count of bytes to the PN532
+        """
+        self._uart.read(self._uart.in_waiting)
         self._uart.write(framebytes)

@@ -28,14 +28,11 @@
 This module will let you communicate with a PN532 RFID/NFC chip
 using SPI on the Raspberry Pi.
 """
-
-
 import time
 import spidev
 import RPi.GPIO as GPIO
 from .pn532 import PN532
 
-# pylint: disable=bad-whitespace
 _SPI_STATREAD                  = 0x02
 _SPI_DATAWRITE                 = 0x01
 _SPI_DATAREAD                  = 0x03
@@ -43,7 +40,9 @@ _SPI_READY                     = 0x01
 
 
 class SPIDevice:
-    """Implements SPI device on spidev"""
+    """
+    Implements SPI device on spidev
+    """
     def __init__(self, cs=None):
         self.spi = spidev.SpiDev(0, 0)
         GPIO.setmode(GPIO.BCM)
@@ -86,8 +85,10 @@ class SPIDevice:
 
 
 def reverse_bit(num):
-    """Turn an LSB byte to an MSB byte, and vice versa. Used for SPI as
-    it is LSB for the PN532, but 99% of SPI implementations are MSB only!"""
+    """
+    Turn an LSB byte to an MSB byte, and vice versa. Used for SPI as
+    it is LSB for the PN532, but 99% of SPI implementations are MSB only!
+    """
     result = 0
     for _ in range(8):
         result <<= 1
@@ -97,11 +98,15 @@ def reverse_bit(num):
 
 
 class PN532_SPI(PN532):
-    """Driver for the PN532 connected over SPI. Pass in a hardware SPI device
+    """
+    Driver for the PN532 connected over SPI. Pass in a hardware SPI device
     & chip select digitalInOut pin. Optional IRQ pin (not used), reset pin and
-    debugging output."""
+    debugging output.
+    """
     def __init__(self, cs=None, irq=None, reset=None, debug=False):
-        """Create an instance of the PN532 class using SPI"""
+        """
+        Create an instance of the PN532 class using SPI
+        """
         self.debug = debug
         self._gpio_init(cs=cs, irq=irq, reset=reset)
         self._spi = SPIDevice(cs)
@@ -121,7 +126,9 @@ class PN532_SPI(PN532):
             GPIO.setup(irq, GPIO.IN)
 
     def _reset(self, pin):
-        """Perform a hardware reset toggle"""
+        """
+        Perform a hardware reset toggle
+        """
         GPIO.output(pin, True)
         time.sleep(0.1)
         GPIO.output(pin, False)
@@ -130,48 +137,51 @@ class PN532_SPI(PN532):
         time.sleep(0.1)
 
     def _wakeup(self):
-        """Send any special commands/data to wake up PN532"""
+        """
+        Send any special commands/data to wake up PN532
+        """
         time.sleep(1)
         if self._cs:
             GPIO.output(self._cs, GPIO.LOW)
-        time.sleep(0.002)   # T_osc_start
-        self._spi.writebytes(bytearray([0x00])) #pylint: disable=no-member
+        time.sleep(0.002)
+        self._spi.writebytes(bytearray([0x00]))
         time.sleep(1)
 
     def _wait_ready(self, timeout=1):
-        """Poll PN532 if status byte is ready, up to `timeout` seconds"""
+        """
+        Poll PN532 if status byte is ready, up to `timeout` seconds
+        """
         status = bytearray([reverse_bit(_SPI_STATREAD), 0])
         timestamp = time.monotonic()
         while (time.monotonic() - timestamp) < timeout:
-            time.sleep(0.01)   # required
-            status = self._spi.xfer(status) #pylint: disable=no-member
-            if reverse_bit(status[1]) == _SPI_READY:  # LSB data is read in MSB
-                return True      # Not busy anymore!
+            time.sleep(0.01)
+            status = self._spi.xfer(status)
+            if reverse_bit(status[1]) == _SPI_READY:
+                return True
             else:
-                time.sleep(0.005)  # pause a bit till we ask again
-        # We timed out!
+                time.sleep(0.005)
         return False
 
     def _read_data(self, count):
-        """Read a specified count of bytes from the PN532."""
-        # Build a read request frame.
+        """
+        Read a specified count of bytes from the PN532.
+        """
         frame = bytearray(count+1)
-        # Add the SPI data read signal byte, but LSB'ify it
         frame[0] = reverse_bit(_SPI_DATAREAD)
-        time.sleep(0.005)   # required
-        frame = self._spi.xfer(frame) #pylint: disable=no-member
+        time.sleep(0.005)
+        frame = self._spi.xfer(frame)
         for i, val in enumerate(frame):
-            frame[i] = reverse_bit(val) # turn LSB data to MSB
+            frame[i] = reverse_bit(val)
         if self.debug:
             print("Reading: ", [hex(i) for i in frame[1:]])
         return frame[1:]
 
     def _write_data(self, framebytes):
-        """Write a specified count of bytes to the PN532"""
-        # start by making a frame with data write in front,
-        # then rest of bytes, and LSBify it
+        """
+        Write a specified count of bytes to the PN532
+        """
         rev_frame = [reverse_bit(x) for x in bytes([_SPI_DATAWRITE]) + framebytes]
         if self.debug:
             print("Writing: ", [hex(i) for i in rev_frame])
-        time.sleep(0.02)   # required
+        time.sleep(0.02)
         self._spi.writebytes(bytes(rev_frame))
