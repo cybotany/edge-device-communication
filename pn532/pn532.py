@@ -198,7 +198,9 @@ class PN532:
         """
         Retrieve the firmware version from the PN532.
         """
-        response = self._call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
+        response = self._call_function(_COMMAND_GETFIRMWAREVERSION,
+                                       response_length=4,
+                                       timeout=0.5)
         if response is None:
             raise RuntimeError('Failed to detect the PN532')
         return tuple(response)
@@ -374,13 +376,17 @@ class PN532:
         """
         Configure the PN532 for NTAG2xx reading.
         """
-        self._call_function(_COMMAND_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
+        self._call_function(_COMMAND_SAMCONFIGURATION,
+                            params=[0x01, 0x14, 0x01])
 
     def read_passive_target(self, card_baud=_ISO14443A, timeout=1):
         """
         Wait for an NTAG to be available and return its UID when found.
         """
-        response = self._call_function(_COMMAND_INLISTPASSIVETARGET, params=[0x01, card_baud], response_length=19, timeout=timeout)
+        response = self._call_function(_COMMAND_INLISTPASSIVETARGET,
+                                       params=[0x01, card_baud],
+                                       response_length=19,
+                                       timeout=timeout)
         if not response or response[0] != 0x01 or response[5] > 7:
             return None
         return response[6:6 + response[5]]
@@ -391,8 +397,10 @@ class PN532:
 
         :return: Tuple with version information or None if no response.
         """
-        command = [NTAG_CMD_GET_VERSION]
-        response = self._call_function(_COMMAND_INDATAEXCHANGE, params=command, response_length=8, timeout=1)
+        response = self._call_function(_COMMAND_INDATAEXCHANGE,
+                                       params=[0x01, NTAG_CMD_GET_VERSION],
+                                       response_length=8,
+                                       timeout=1)
         if response is None or len(response) < 8:
             print("Failed to get version information or invalid response.")
             return None
