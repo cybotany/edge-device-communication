@@ -347,15 +347,13 @@ class PN532:
                 return True
         return False
 
-    def _read_and_check_response(self, command, response_length, timeout):
+    def _read_response(self, command, response_length, timeout):
         """
-        Read and validate the response for a command
+        Read the response for a command
         """
         if not self._wait_ready(timeout):
             return None
         response = self._read_frame(response_length + 2)
-        if response[0] != _PN532TOHOST or response[1] != (command + 1):
-            raise RuntimeError('Unexpected command response')
         return response[2:]
 
     def _call_function(self, command, response_length=0, params=None, timeout=1):
@@ -370,7 +368,7 @@ class PN532:
             return None
         if not self._wait_for_ack(timeout):
             return None
-        return self._read_and_check_response(command, response_length, timeout)
+        return self._read_response(command, response_length, timeout)
 
     def SAM_configuration(self):
         """
