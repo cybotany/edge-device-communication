@@ -29,16 +29,20 @@ This module will let you communicate with a PN532 NFC Hat using I2C, SPI or UART
 The main difference is the interfaces implements.
 """
 import RPi.GPIO as GPIO
+import time
 
-
-# pylint: disable=bad-whitespace
+# Constants
 _PREAMBLE                      = 0x00
 _STARTCODE1                    = 0x00
 _STARTCODE2                    = 0xFF
 _POSTAMBLE                     = 0x00
-
 _HOSTTOPN532                   = 0xD4
 _PN532TOHOST                   = 0xD5
+_WAKEUP                        = 0x55
+_ISO14443A                     = 0x00
+_VALIDATIONBIT                 = 0x80
+_ACK                           = b'\x00\x00\xFF\x00\xFF\x00'
+_FRAME_START                   = b'\x00\x00\xFF'
 
 # PN532 Commands
 _COMMAND_DIAGNOSE              = 0x00
@@ -74,13 +78,6 @@ _COMMAND_TGGETINITIATORCOMMAND = 0x88
 _COMMAND_TGRESPONSETOINITIATOR = 0x90
 _COMMAND_TGGETTARGETSTATUS     = 0x8A
 
-_RESPONSE_INDATAEXCHANGE       = 0x41
-_RESPONSE_INLISTPASSIVETARGET  = 0x4B
-
-_WAKEUP                        = 0x55
-
-_ISO14443A              = 0x00
-
 # NTAG Commands
 NTAG_CMD_GET_VERSION                = 0x60
 NTAG_CMD_READ                       = 0x30
@@ -88,12 +85,12 @@ NTAG_CMD_FAST_READ                  = 0x3A
 NTAG_CMD_WRITE                      = 0xA2
 NTAG_CMD_COMPATIBILITY_WRITE        = 0xA0
 NTAG_CMD_READ_CNT                   = 0x39
-NTAG_ADDR_READ_CNT                  = 0x39 # 02h
+NTAG_ADDR_READ_CNT                  = 0x02
 NTAG_CMD_PWD_AUTH                   = 0x1B
 NTAG_CMD_READ_SIG                   = 0x3C
-NTAG_ADDR_READ_SIG                  = 0x3C # 00h
+NTAG_ADDR_READ_SIG                  = 0x00
 
-# Prefixes for NDEF Records (to identify record type)
+# NDEF Record Types
 NDEF_URIPREFIX_NONE                 = 0x00
 NDEF_URIPREFIX_HTTP_WWWDOT          = 0x01
 NDEF_URIPREFIX_HTTPS_WWWDOT         = 0x02
@@ -131,12 +128,6 @@ NDEF_URIPREFIX_URN_EPC_RAW          = 0x21
 NDEF_URIPREFIX_URN_EPC              = 0x22
 NDEF_URIPREFIX_URN_NFC              = 0x23
 
-_GPIO_VALIDATIONBIT            = 0x80
-
-_ACK                           = b'\x00\x00\xFF\x00\xFF\x00'
-_FRAME_START                   = b'\x00\x00\xFF'
-# pylint: enable=bad-whitespace
-
 PN532_ERRORS = {
     0x01: 'PN532 ERROR TIMEOUT',
     0x02: 'PN532 ERROR CRC',
@@ -169,248 +160,325 @@ PN532_ERRORS = {
 }
 
 class PN532Error(Exception):
-    """PN532 error code"""
+    """
+    PN532 error code
+    """
     def __init__(self, err):
-        Exception.__init__(self)
-        self.err = err
-        self.errmsg = PN532_ERRORS[err]
+        super().__init__(PN532_ERRORS.get(err, 'Unknown Error'))
+
 
 class BusyError(Exception):
-    """Base class for exceptions in this module."""
+    """
+    Exception for busy state errors.
+    """
     pass
 
 
 class PN532:
-    """PN532 driver base, must be extended for I2C/SPI/UART interfacing"""
+    """
+    Driver for the PN532 NFC Hat. Extend for specific interfaces (I2C/SPI/UART).
+    """
 
     def __init__(self, *, debug=False, reset=None):
-        """Create an instance of the PN532 class
+        """
+        Create an instance of the PN532 class
         """
         self.debug = debug
         if reset:
-            if debug:
-                print("Resetting")
             self._reset(reset)
-
-        try:
-            self._wakeup()
-            self.get_firmware_version() # first time often fails, try 2ce
-            return
-        except (BusyError, RuntimeError):
-            pass
-        self.get_firmware_version()
+        self._initialize()
 
     def _gpio_init(self, **kwargs):
-        # Hardware GPIO init
-        raise NotImplementedError
-
-    def _reset(self, pin):
-        # Perform a hardware reset toggle
-        raise NotImplementedError
-
-    def _read_data(self, count):
-        # Read raw data from device, not including status bytes:
-        # Subclasses MUST implement this!
-        raise NotImplementedError
-
-    def _write_data(self, framebytes):
-        # Write raw bytestring data to device, not including status bytes:
-        # Subclasses MUST implement this!
-        raise NotImplementedError
-
-    def _wait_ready(self, timeout):
-        # Check if busy up to max length of 'timeout' seconds
-        # Subclasses MUST implement this!
-        raise NotImplementedError
-
-    def _wakeup(self):
-        # Send special command to wake up
-        raise NotImplementedError
-
-    def _write_frame(self, data):
-        """Write a frame to the PN532 with the specified data bytearray."""
-        assert data is not None and 1 < len(data) < 255, 'Data must be array of 1 to 255 bytes.'
-        # Build frame to send as:
-        # - Preamble (0x00)
-        # - Start code  (0x00, 0xFF)
-        # - Command length (1 byte)
-        # - Command length checksum
-        # - Command bytes
-        # - Checksum
-        # - Postamble (0x00)
-        length = len(data)
-        frame = bytearray(length+7)
-        frame[0] = _PREAMBLE
-        frame[1] = _STARTCODE1
-        frame[2] = _STARTCODE2
-        checksum = sum(frame[0:3])
-        frame[3] = length & 0xFF
-        frame[4] = (~length + 1) & 0xFF
-        frame[5:-2] = data
-        checksum += sum(data)
-        frame[-2] = ~checksum & 0xFF
-        frame[-1] = _POSTAMBLE
-        # Send frame
-        if self.debug:
-            print('Write frame: ', [hex(i) for i in frame])
-        self._write_data(bytes(frame))
-
-    def _read_frame(self, length):
-        """Read a response frame from the PN532 of at most length bytes in size.
-        Returns the data inside the frame if found, otherwise raises an exception
-        if there is an error parsing the frame.  Note that less than length bytes
-        might be returned!
         """
-        # Read frame with expected length of data.
-        response = self._read_data(length+7)
-        if self.debug:
-            print('Read frame:', [hex(i) for i in response])
-
-        # Swallow all the 0x00 values that preceed 0xFF.
-        offset = 0
-        while response[offset] == 0x00:
-            offset += 1
-            if offset >= len(response):
-                raise RuntimeError('Response frame preamble does not contain 0x00FF!')
-        if response[offset] != 0xFF:
-            raise RuntimeError('Response frame preamble does not contain 0x00FF!')
-        offset += 1
-        if offset >= len(response):
-            raise RuntimeError('Response contains no data!')
-        # Check length & length checksum match.
-        frame_len = response[offset]
-        if (frame_len + response[offset+1]) & 0xFF != 0:
-            raise RuntimeError('Response length checksum did not match length!')
-        # Check frame checksum value matches bytes.
-        checksum = sum(response[offset+2:offset+2+frame_len+1]) & 0xFF
-        if checksum != 0:
-            raise RuntimeError('Response checksum did not match expected value: ', checksum)
-        # Return frame data.
-        return response[offset+2:offset+2+frame_len]
-
-    def call_function(self, command, response_length=0, params=None, timeout=1):
-        """Send specified command to the PN532 and expect up to response_length
-        bytes back in a response.  Note that less than the expected bytes might
-        be returned!  Params can optionally specify an array of bytes to send as
-        parameters to the function call.  Will wait up to timeout seconds
-        for a response and return a bytearray of response bytes, or None if no
-        response is available within the timeout.
+        Hardware GPIO init
         """
-        # Build frame data with command and parameters.
-        if params is None:
-            params = []
-        data = bytearray(2+len(params))
-        data[0] = _HOSTTOPN532
-        data[1] = command & 0xFF
-        for i, val in enumerate(params):
-            data[2+i] = val
-        # Send frame and wait for response.
-        try:
-            self._write_frame(data)
-        except OSError:
-            self._wakeup()
-            return None
-        if not self._wait_ready(timeout):
-            return None
-        # Verify ACK response and wait to be ready for function response.
-        if not _ACK == self._read_data(len(_ACK)):
-            raise RuntimeError('Did not receive expected ACK from PN532!')
-        if not self._wait_ready(timeout):
-            return None
-        # Read response bytes.
-        response = self._read_frame(response_length+2)
-        # Check that response is for the called function.
-        if not (response[0] == _PN532TOHOST and response[1] == (command+1)):
-            raise RuntimeError('Received unexpected command response!')
-        # Return response data.
-        return response[2:]
+        raise NotImplementedError
 
-    def get_firmware_version(self):
-        """Call PN532 GetFirmwareVersion function and return a tuple with the IC,
-        Ver, Rev, and Support values.
+    def _get_firmware_version(self):
+        """
+        Retrieve the firmware version from the PN532.
         """
         response = self.call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
-        if response is None:
+        if not response:
             raise RuntimeError('Failed to detect the PN532')
         return tuple(response)
 
-    def SAM_configuration(self):   # pylint: disable=invalid-name
+    def _initialize(self):
         """
-        Configure the PN532 to read NTAG2xx cards. Send SAM configuration
-        command with configuration for:
-          - 0x01, normal mode
-          - 0x14, timeout 50ms * 20 = 1 second
-          - 0x01, use IRQ pin
-        Note that no other verification is necessary as call_function will
-        check the command was executed as expected.
+        Initialize the device and check its firmware version.
+        """
+        self._wakeup()
+        try:
+            self._get_firmware_version()
+        except (BusyError, RuntimeError):
+            self._get_firmware_version()
+
+    def _reset(self, pin):
+        """
+        Perform a hardware reset toggle
+        """
+        raise NotImplementedError
+
+    def _read_data(self, count):
+        """
+        Read raw data from device, not including status bytes:
+        Subclasses MUST implement this!
+        """
+        raise NotImplementedError
+
+    def _write_data(self, framebytes):
+        """
+        Write raw bytestring data to device, not including status bytes:
+        Subclasses MUST implement this!
+        """
+        raise NotImplementedError
+
+    def _wait_ready(self, timeout):
+        """
+        Check if busy up to max length of 'timeout' seconds
+        Subclasses MUST implement this!
+        """
+        raise NotImplementedError
+
+    def _wakeup(self):
+        """
+        Send special command to wake up
+        """
+        raise NotImplementedError
+
+    def _write_frame(self, data):
+        """
+        Write a frame to the PN532.
+        """
+        self._validate_data_length(data, 255)
+        frame = self._build_frame(data)
+        self._write_data(bytes(frame))
+
+    def _read_frame(self, length):
+        """
+        Read a response frame from the PN532.
+        """
+        response = self._read_data(length + 7)
+        return self._parse_frame(response, length)
+
+    def _validate_data_length(self, data, length=255):
+        """
+        Validate the length of the data to be sent.
+
+        :param data: The data to be validated.
+        :param length: The maximum allowable length of the data.
+        :raises ValueError: If the data length is not within the valid range.
+        """
+        if not data or not 1 < len(data) <= length:
+            raise ValueError(f'Data must be an array of 1 to {length} bytes.')
+
+    def _handle_frame(self, data, operation='build'):
+        """
+        Handle the construction or parsing of a frame.
+
+        :param data: The data for building or parsing.
+        :param operation: 'build' for building a frame, 'parse' for parsing.
+        :return: Constructed or parsed frame.
+        """
+        if operation == 'build':
+            length = len(data)
+            frame = bytearray(length + 7)
+            return frame
+        elif operation == 'parse':
+            offset = 0
+            while data[offset] == 0x00:
+                offset += 1
+                if offset >= len(data):
+                    raise RuntimeError('Response frame preamble does not contain 0x00FF!')
+            if data[offset] != 0xFF:
+                raise RuntimeError('Response frame preamble does not contain 0x00FF!')
+            offset += 1
+            if offset >= len(data):
+                raise RuntimeError('Response contains no data!')
+            frame_len = data[offset]
+            if (frame_len + data[offset+1]) & 0xFF != 0:
+                raise RuntimeError('Response length checksum did not match length!')
+            checksum = sum(data[offset+2:offset+2+frame_len+1]) & 0xFF
+            if checksum != 0:
+                raise RuntimeError('Response checksum did not match expected value.')
+            parsed_data =  data[offset+2:offset+2+frame_len]
+            return parsed_data
+
+    def _prepare_command_data(self, command, params=None):
+        """
+        Prepare data for sending a command.
+
+        :param command: The command byte.
+        :param params: Optional parameters for the command.
+        :return: Prepared data as bytearray.
+        """
+        if params is None:
+            params = []
+        data = bytearray(2 + len(params))
+        data[0] = _HOSTTOPN532
+        data[1] = command & 0xFF
+        data[2:] = params
+        return data
+
+    def _wait_for_ack(self, timeout):
+        """
+        Wait for an ACK response within the given timeout.
+
+        :param timeout: Time to wait for the ACK response.
+        :return: True if ACK received, False otherwise.
+        """
+        start_time = time.time()
+        while (time.time() - start_time) < timeout:
+            ack = self._read_data(len(_ACK))
+            if ack == _ACK:
+                return True
+        return False
+
+    def _read_and_check_response(self, command, response_length, timeout):
+        """
+        Read and validate the response for a command
+        """
+        if not self._wait_ready(timeout):
+            return None
+        response = self._read_frame(response_length + 2)
+        if response[0] != _PN532TOHOST or response[1] != (command + 1):
+            raise RuntimeError('Unexpected command response')
+        return response[2:]
+
+    def call_function(self, command, response_length=0, params=None, timeout=1):
+        """
+        Send specified command to the PN532
+        """
+        data = self._prepare_command_data(command, params)
+        self._write_frame(data)
+        if not self._wait_for_ack(timeout):
+            return None
+        return self._read_and_check_response(command, response_length, timeout)
+
+    def SAM_configuration(self):
+        """
+        Configure the PN532 for NTAG2xx reading.
         """
         self.call_function(_COMMAND_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
 
     def read_passive_target(self, card_baud=_ISO14443A, timeout=1):
         """
         Wait for an NTAG to be available and return its UID when found.
-        Will wait up to timeout seconds and return None if no card is found,
-        otherwise a bytearray with the UID of the found card is returned.
         """
-        try:
-            response = self.call_function(_COMMAND_INLISTPASSIVETARGET,
-                                          params=[0x01, card_baud],
-                                          response_length=19,
-                                          timeout=timeout)
-        except BusyError:
-            return None # no card found!
-        # If no response is available return None to indicate no card is present.
-        if response is None:
+        response = self.call_function(_COMMAND_INLISTPASSIVETARGET, params=[0x01, card_baud], response_length=19, timeout=timeout)
+        if not response or response[0] != 0x01 or response[5] > 7:
             return None
-        # Check only 1 card with up to a 7 byte UID is present.
-        if response[0] != 0x01:
-            raise RuntimeError('More than one card detected!')
-        if response[5] > 7:
-            raise RuntimeError('Found card with unexpectedly long UID!')
-        # Return UID of card.
-        return response[6:6+response[5]]
+        return response[6:6 + response[5]]
+
+    def ntag2xx_get_version(self):
+        """
+        Send the GET_VERSION command to an NTAG chip and return its version information.
+
+        :return: Tuple with version information or None if no response.
+        """
+        command = [NTAG_CMD_GET_VERSION]
+        response = self.call_function(_COMMAND_INDATAEXCHANGE, params=command, response_length=8, timeout=1)
+        if response is None or len(response) < 8:
+            print("Failed to get version information or invalid response.")
+            return None
+        return tuple(response)
+
+    def ntag2xx_read(self, start_page):
+        """
+        Read 16 bytes from the specified start page.
+        """
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_READ, start_page & 0xFF],
+                                      response_length=20)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[1:]
+
+    def ntag2xx_fast_read(self, start_page, end_page):
+        """
+        Read consecutive pages from start_page to end_page.
+        """
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_FAST_READ, start_page & 0xFF, end_page & 0xFF],
+                                      response_length=(end_page - start_page + 1) * 4 + 2)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[1:]
+
+    def ntag2xx_compatibility_write(self, page, data):
+        """
+        Write 4 bytes to a specific page using Compatibility Write.
+        """
+        self._validate_data_length(data, 4)
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_COMPATIBILITY_WRITE, page & 0xFF] + list(data),
+                                      response_length=1)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[0] == 0x00
+
+    def ntag2xx_read_cnt(self):
+        """
+        Read the NTAG NFC counter value.
+        """
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_READ_CNT, NTAG_ADDR_READ_CNT],
+                                      response_length=4)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[1:]
+
+    def ntag2xx_pwd_auth(self, password):
+        """
+        Authenticate with the NTAG using a password.
+        """
+        self._validate_data_length(password, 4)
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_PWD_AUTH] + list(password),
+                                      response_length=2)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[1] == 0x00
+
+    def ntag2xx_read_sig(self):
+        """
+        Read the NTAG signature.
+        """
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=[0x01, NTAG_CMD_READ_SIG, NTAG_ADDR_READ_SIG],
+                                      response_length=34)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[1:]
 
     def ntag2xx_write_block(self, block_number, data):
-        """Write a block of data to the card.  Block number should be the block
-        to write and data should be a byte array of length 4 with the data to
-        write.  If the data is successfully written then True is returned,
-        otherwise False is returned.
         """
-        assert data is not None and len(data) == 4, 'Data must be an array of 4 bytes!'
-        # Build parameters for InDataExchange command to do NTAG203 classic write.
-        params = bytearray(3+len(data))
-        params[0] = 0x01  # Max card numbers
-        params[1] = NTAG_CMD_WRITE
-        params[2] = block_number & 0xFF
-        params[3:] = data
-        # Send InDataExchange request.
+        Write a block of data to the card.
+        """
+        self._validate_data_length(data, 4)
         response = self.call_function(_COMMAND_INDATAEXCHANGE,
-                                      params=params,
+                                      params=[0x01, NTAG_CMD_WRITE, block_number & 0xFF, data],
                                       response_length=1)
         if response[0]:
             raise PN532Error(response[0])
         return response[0] == 0x00
 
     def ntag2xx_read_block(self, block_number):
-
         """
-        Read a block of data from the card.  Block number should be the block
-        to read. If the block is successfully read a bytearray of length 16 with
-        data starting at the specified block will be returned. If the block is
-        not read then None will be returned.
+        Read a block of data from the card.
         """
         response = self.call_function(_COMMAND_INDATAEXCHANGE,
                                       params=[0x01, NTAG_CMD_READ, block_number & 0xFF],
                                       response_length=17)
-        # Check first response is 0x00 to show success.
         if response[0]:
             raise PN532Error(response[0])
-        # Return first 4 bytes since 16 bytes are always returned.
+        # Return first 4 bytes since 16 bytes are returned.
         return response[1:][0:4]
 
     def ntag2xx_create_record(self, tnf, record_type, payload):
         """
         Create an NDEF record.
+
         :param tnf: Type Name Format for the record
         :param record_type: Type of the record (e.g., URI, Text)
         :param payload: Data to store in the record
@@ -425,6 +493,7 @@ class PN532:
     def ntag2xx_write_record(self, ndef_record, start_block=4):
         """
         Write an NDEF record to an NTAG2XX NFC tag.
+
         :param ndef_record: NDEF record as a byte array
         :param start_block: Starting block number to write the record
         :return: True if write is successful, False otherwise
@@ -441,19 +510,21 @@ class PN532:
             return False
 
     def read_gpio(self, pin=None):
-        """Read the state of the PN532's GPIO pins.
+        """
+        Read the state of the PN532's GPIO pins.
+        
         :params pin: <str> specified the pin to read
         :return:
-        If 'pin' is None, returns 3 bytes containing the pin state where:
-            P3[0] = P30,   P7[0] = 0,   I[0] = I0,
-            P3[1] = P31,   P7[1] = P71, I[1] = I1,
-            P3[2] = P32,   P7[2] = P72, I[2] = 0,
-            P3[3] = P33,   P7[3] = 0,   I[3] = 0,
-            P3[4] = P34,   P7[4] = 0,   I[4] = 0,
-            P3[5] = P35,   P7[5] = 0,   I[5] = 0,
-            P3[6] = 0,     P7[6] = 0,   I[6] = 0,
-            P3[7] = 0,     P7[7] = 0,   I[7] = 0,
-        If 'pin' is not None, returns the specified pin state.
+            If 'pin' is None, returns 3 bytes containing the pin state where:
+                P3[0] = P30,   P7[0] = 0,   I[0] = I0,
+                P3[1] = P31,   P7[1] = P71, I[1] = I1,
+                P3[2] = P32,   P7[2] = P72, I[2] = 0,
+                P3[3] = P33,   P7[3] = 0,   I[3] = 0,
+                P3[4] = P34,   P7[4] = 0,   I[4] = 0,
+                P3[5] = P35,   P7[5] = 0,   I[5] = 0,
+                P3[6] = 0,     P7[6] = 0,   I[6] = 0,
+                P3[7] = 0,     P7[7] = 0,   I[7] = 0,
+            If 'pin' is not None, returns the specified pin state.
         """
         response = self.call_function(_COMMAND_READGPIO, response_length=3)
         if not pin:
@@ -464,11 +535,14 @@ class PN532:
         return True if pins[pin[:-1].lower()] >> int(pin[-1]) & 1 else False
 
     def write_gpio(self, pin=None, state=None, p3=None, p7=None):
-        """Write the state to the PN532's GPIO pins.
+        """
+        Write the state to the PN532's GPIO pins.
+        
         :params pin: <str> specified the pin to write
         :params state: <bool> pin level
         :params p3: byte to set multiple pins level
         :params p7: byte to set multiple pins level
+        
         If p3 or p7 is not None, set the pins with p3 or p7, there is
         no need to read pin states before write with the param p3 or p7
         bits:
@@ -489,9 +563,8 @@ class PN532:
         """
         params = bytearray(2)
         if (p3 is not None) or (p7 is not None):
-            # 0x80, the validation bit.
-            params[0] = 0x80 | p3 & 0xFF if p3 else 0x00
-            params[1] = 0x80 | p7 & 0xFF if p7 else 0x00
+            params[0] = _VALIDATIONBIT | p3 & 0xFF if p3 else 0x00
+            params[1] = _VALIDATIONBIT | p7 & 0xFF if p7 else 0x00
             self.call_function(_COMMAND_WRITEGPIO, params=params)
         else:
             if pin[:-1].lower() not in ('p3', 'p7'):
@@ -499,16 +572,14 @@ class PN532:
             p3, p7, _ = self.read_gpio()
             if pin[:-1].lower() == 'p3':
                 if state:
-                    # 0x80, the validation bit.
-                    params[0] = 0x80 | p3 | (1 << int(pin[-1])) & 0xFF
+                    params[0] = _VALIDATIONBIT | p3 | (1 << int(pin[-1])) & 0xFF
                 else:
-                    params[0] = 0x80 | p3 & ~(1 << int(pin[-1])) & 0xFF
-                params[1] = 0x00    # leave p7 unchanged
+                    params[0] = _VALIDATIONBIT | p3 & ~(1 << int(pin[-1])) & 0xFF
+                params[1] = 0x00
             if pin[:-1].lower() == 'p7':
                 if state:
-                    # 0x80, the validation bit.
-                    params[1] = 0x80 | p7 | (1 << int(pin[-1])) & 0xFF
+                    params[1] = _VALIDATIONBIT | p7 | (1 << int(pin[-1])) & 0xFF
                 else:
-                    params[1] = 0x80 | p7 & ~(1 << int(pin[-1])) & 0xFF
-                params[0] = 0x00    # leave p3 unchanged
+                    params[1] = _VALIDATIONBIT | p7 & ~(1 << int(pin[-1])) & 0xFF
+                params[0] = 0x00
             self.call_function(_COMMAND_WRITEGPIO, params=params)

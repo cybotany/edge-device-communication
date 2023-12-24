@@ -1,19 +1,15 @@
 import RPi.GPIO as GPIO
 from pn532 import *
-
+ 
 def extract_uid(pages):
-    """ Extract the 7-byte UID from the first 9 bytes of memory. """
-    # UID is the first 7 bytes of the combined pages
+    """
+    Extract the 7-byte UID from the first 9 bytes of memory.
+    """
     return pages[:7]
 
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=False, reset=20, cs=4)
-
-        ic, ver, rev, support = pn532.get_firmware_version()
-        print('Found PN532 with firmware version: {0}.{1}'.format(ver, rev))
-
-        # Configure PN532 to communicate with NTAG213
         pn532.SAM_configuration()
 
         print('Waiting for RFID/NFC card...')
