@@ -198,10 +198,17 @@ class PN532:
         """
         Retrieve the firmware version from the PN532.
         """
-        response = self.call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
-        if not response:
-            raise RuntimeError('Failed to detect the PN532')
-        return tuple(response)
+        try:
+            response = self.call_function(_COMMAND_GETFIRMWAREVERSION, 4, timeout=0.5)
+            if not response:
+                if self.debug:
+                    print("No response from PN532")
+                raise RuntimeError('Failed to detect the PN532')
+            return tuple(response)
+        except Exception as e:
+            if self.debug:
+                print("Exception in _get_firmware_version:", e)
+            raise
 
     def _initialize(self):
         """
