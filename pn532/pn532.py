@@ -292,8 +292,15 @@ class PN532:
         Write a block of data to the card.
         """
         self._validate_data_length(data, 4)
+
+        params = bytearray(3 + len(data))
+        params[0] = 0x01
+        params[1] = _NTAG_CMD_WRITE
+        params[2] = block_number & 0xFF
+        params[3:] = data
+
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                      params=[0x01, _NTAG_CMD_WRITE, block_number & 0xFF, data],
+                                      params=params,
                                       response_length=1)
         if response[0]:
             raise PN532Error(response[0])
