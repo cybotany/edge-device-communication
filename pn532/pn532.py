@@ -44,7 +44,8 @@ from .utils.contants import (PN532_ERRORS,
                              _PN532_CMD_SAMCONFIGURATION,
                              _PN532_CMD_INLISTPASSIVETARGET,
                              _NTAG_CMD_READ,
-                             _NTAG_CMD_WRITE)
+                             _NTAG_CMD_WRITE,
+                             _NTAG_CMD_GET_VERSION)
 
 
 class PN532Error(Exception):
@@ -302,4 +303,15 @@ class PN532:
                                       response_length=17)
         if response[0]:
             raise PN532Error(response[0])
-        return response[1:][0:4]
+        return response[1:]
+
+    def ntag2xx_get_version(self):
+        """
+        Read a block of data from the card.
+        """
+        response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
+                                      params=[0x01, _NTAG_CMD_GET_VERSION, 0],
+                                      response_length=9)
+        if response[0]:
+            raise PN532Error(response[0])
+        return response[1:]
