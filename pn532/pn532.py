@@ -317,53 +317,45 @@ class PN532:
 
     def create_ndef_record(self, tnf, record_type, payload, record_position='only'):
         """
-        Create an NDEF record.
-
-        This function constructs an NDEF record with a specified TNF, record type, and payload.
-        It also considers the position of the record in an NDEF message for setting the MB and ME flags.
+        Create an NDEF record with specified TNF, record type, payload, and its position in the NDEF message.
 
         :param tnf: Type Name Format for the record (TNF).
         :param record_type: Type of the record (e.g., URI, Text).
         :param payload: Data to store in the record.
         :param record_position: Position of the record in an NDEF message ('first', 'last', 'only', 'other').
         :return: NDEF record as a byte array.
-
-        The NDEF record header consists of:
-        - MB (Message Begin) flag: Set if this is the first record in the message.
-        - ME (Message End) flag: Set if this is the last record in the message.
-        - SR (Short Record) flag: Set if the payload length is less than 256 bytes.
-        - TNF: Type Name Format field, indicating the structure of the payload.
-        - IL (ID Length field present) flag: Not used, set to 0.
         """
-        # Set the MB and ME flags based on the record's position in the NDEF message
+        # Set the MB and ME flags based on the record's position
+        header = 0b00000000  # Initialize with all flags set to 0
         if record_position == 'first':
-            header = 0b10000000  # MB=1, ME=0
+            header |= 0b10000000  # MB=1, ME=0
         elif record_position == 'last':
-            header = 0b01000000  # MB=0, ME=1
+            header |= 0b01000000  # MB=0, ME=1
         elif record_position == 'only':
-            header = 0b11000000  # MB=1, ME=1
-        else:  # 'other' or middle record
-            header = 0b00000000  # MB=0, ME=0
+            header |= 0b11000000  # MB=1, ME=1
 
         header |= tnf  # Add TNF to the header
 
+        # Handling URI payload with URI Identifier Code
         if record_type == 'U':
-            uri_code = b'\x02'
-            encoded_payload = uri_code + payload.encode('utf-8')
+            if payload.startswith("https://www."):
+                uri_code = b'\x02'  # Code for "https://www."
+                encoded_payload = uri_code + payload[12:].encode('utf-8')
+            else:
+                raise ValueError("Unsupported URL format")
         else:
             encoded_payload = payload.encode('utf-8')
 
         type_length = len(record_type.encode('utf-8'))
         payload_length = len(encoded_payload)
 
-        # Set the SR bit in the header based on payload length
+        # Set the SR bit based on payload length
         if payload_length < 256:
             header |= 0b00010000  # SR=1
             payload_length_bytes = payload_length.to_bytes(1, 'big')
         else:
             payload_length_bytes = payload_length.to_bytes(4, 'big')
 
-        # Construct the complete NDEF record
         ndef_record = bytearray([header, type_length]) + payload_length_bytes
         ndef_record += record_type.encode('utf-8') + encoded_payload
 
