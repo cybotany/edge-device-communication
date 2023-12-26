@@ -24,7 +24,7 @@ if __name__ == '__main__':
                     print('Found duplicate card. Extracted UID:', uid_hex)
                 
                 try:
-                    ntag_data = pn532.ntag2xx_dump()
+                    ntag_data = pn532.ntag2xx_dump(start_block=0, end_block=9)
                     #record1 = pn532.create_ndef_record(tnf=0x01, record_type='T', payload='Testing', record_position='only')
                     #record2 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='microsoft.com', record_position='middle')
                     #record3 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='yahoo.com', record_position='last')

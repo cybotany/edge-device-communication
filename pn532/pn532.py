@@ -415,14 +415,18 @@ class PN532:
             print("Error writing NDEF message to the tag:", e)
             return False
 
-    def ntag2xx_dump(self):
+    def ntag2xx_dump(self, start_block=0, end_block=44):
         """
-        Reads all 45 pages (blocks) of the NTAG2xx NFC tag.
+        Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
+        Defaults to reading all 45 blocks if no range is specified.
+
+        :param start_block: The starting block number (inclusive).
+        :param end_block: The ending block number (inclusive).
         """
-        print("Reading NTAG2xx NFC tag...")
+        print(f"Reading NTAG2xx NFC tag from block {start_block} to block {end_block}...")
 
         all_data = []
-        for block_number in range(45):
+        for block_number in range(start_block, end_block + 1):
             try:
                 block_data = self.ntag2xx_read_block(block_number)
                 all_data.append(block_data)
