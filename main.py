@@ -28,7 +28,7 @@ if __name__ == '__main__':
                     print('Found duplicate card. Extracted UID:', uid_hex)
                 
                 try:
-                    pn532.ntag2xx_write_block(BLOCK_NUMBER, BLOCK_DATA)
+                    pn532.ntag2xx_read_block(BLOCK_NUMBER)
                     #if pn532.ntag2xx_read_block(BLOCK_NUMBER) == BLOCK_DATA:
                     #    print('write block %d successfully' % BLOCK_NUMBER)
                 except nfc.PN532Error as e:
