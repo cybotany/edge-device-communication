@@ -45,7 +45,7 @@ from .utils.contants import (PN532_ERRORS,
                              _PN532_CMD_INLISTPASSIVETARGET,
                              _NTAG_CMD_READ,
                              _NTAG_CMD_WRITE,
-                             _NTAG_CMD_GET_VERSION)
+                             _NTAG_CMD_FAST_READ)
 
 
 class PN532Error(Exception):
@@ -305,13 +305,14 @@ class PN532:
             raise PN532Error(response[0])
         return response[1:]
 
-    def ntag2xx_get_version(self):
+    def ntag2xx_fast_read_block(self, block_start, block_end):
         """
-        Read a block of data from the card.
+        Returns all n * 4 bytes of the card starting from the block_start to the block_end.
         """
+        bytes_returned = block_end - block_start + 1
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                      params=[0x01, _NTAG_CMD_GET_VERSION, 0],
-                                      response_length=9)
+                                      params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
+                                      response_length=bytes_returned)
         if response[0]:
             raise PN532Error(response[0])
         return response[1:]
