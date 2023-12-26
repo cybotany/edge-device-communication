@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from pn532 import PN532_SPI
+from pn532 import PN532_SPI, PN532Error
 
 def extract_uid(pages):
     """
@@ -34,6 +34,14 @@ if __name__ == '__main__':
                     if uid_hex not in uid_list:
                         uid_list.append(uid_hex)
                         print('Found new card. Extracted UID:', uid_hex)
+
+                        for i in range(135):
+                            try:
+                                print(i, ':', ' '.join(['%02X' % x
+                                    for x in pn532.ntag2xx_read_block(i)]))
+                            except Exception as e:
+                                print(e)
+                                break
                     else:
                         print('Found duplicate card. Extracted UID:', uid_hex)
                 except Exception as e:

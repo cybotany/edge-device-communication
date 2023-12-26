@@ -122,9 +122,11 @@ class PN532:
         """
         self._wakeup()
         try:
-            self._get_firmware_version()
+            ic, ver, rev, support = self._get_firmware_version()
         except (BusyError, RuntimeError):
-            self._get_firmware_version()
+            ic, ver, rev, support = self._get_firmware_version()
+        if self.debug:
+            print('Found PN532 with firmware version: {0}.{1}'.format(ver, rev))
 
     def _reset(self, pin):
         """
