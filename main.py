@@ -2,10 +2,6 @@ import RPi.GPIO as GPIO
 import pn532.pn532 as nfc
 from pn532 import PN532_SPI
 
-
-BLOCK_NUMBER = 6
-BLOCK_DATA = bytes([0x01, 0x02, 0x03, 0x04])
-
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=True, reset=20, cs=4)

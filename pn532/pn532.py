@@ -348,7 +348,7 @@ class PN532:
         header |= tnf  # Add TNF to the header
 
         if record_type == 'U':
-            uri_code = b'\x03'  # Code for "https://"
+            uri_code = b'\x02'
             encoded_payload = uri_code + payload.encode('utf-8')
         else:
             encoded_payload = payload.encode('utf-8')
