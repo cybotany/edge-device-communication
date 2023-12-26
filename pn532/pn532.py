@@ -315,7 +315,7 @@ class PN532:
             raise PN532Error(response[0])
         return response[1:][:4]
 
-    def create_ndef_record(self, tnf, record_type, payload, record_position='only'):
+    def create_ndef_record(self, tnf, record_type, payload, record_position='only', language_code='en'):
         """
         Create an NDEF record with specified TNF, record type, payload, and its position in the NDEF message.
 
@@ -334,13 +334,22 @@ class PN532:
         elif record_position == 'only':
             header |= 0b11000000  # MB=1, ME=1
 
+
         header |= tnf  # Add TNF to the header
 
-        # Handling URI payload with URI Identifier Code
-        if record_type == 'U':
+        # Handling Text record with language code
+        if record_type == 'T':
+            # Create status byte (UTF-8 encoding and language code length)
+            status_byte = 0x00 | len(language_code)
+
+            # Encode payload with language code
+            encoded_payload = bytearray([status_byte]) + language_code.encode('utf-8') + payload.encode('utf-8')
+        elif record_type == 'U':
+            # Handling URI payload with URI Identifier Code
             uri_code = b'\x02'
             encoded_payload = uri_code + payload.encode('utf-8')
         else:
+            # Other record types
             encoded_payload = payload.encode('utf-8')
 
         type_length = len(record_type.encode('utf-8'))
