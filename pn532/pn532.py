@@ -129,7 +129,6 @@ class PN532:
             self._get_firmware_version()
         except (BusyError, RuntimeError):
             self._get_firmware_version()
-            self.SAM_configuration()
 
     def _reset(self, pin):
         """
@@ -270,9 +269,9 @@ class PN532:
         """
         try:
             response = self._call_function(_PN532_CMD_INLISTPASSIVETARGET,
-                                        params=[0x01, card_baud],
-                                        response_length=19,
-                                        timeout=timeout)
+                                            params=[0x01, card_baud],
+                                            response_length=19,
+                                            timeout=timeout)
         except BusyError:
             return None
         # If no response is available return None to indicate no card is present.

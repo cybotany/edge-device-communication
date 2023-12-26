@@ -4,6 +4,7 @@ from pn532 import PN532_SPI
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=True, reset=20, cs=4)
+        pn532.SAM_configuration()
         print('Waiting for an NFC card...')
         uid_list = []
         last_uid = None
