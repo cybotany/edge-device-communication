@@ -300,16 +300,17 @@ class PN532:
         """
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
                                       params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
-                                      response_length=15)
+                                      response_length=17)
         if response[0]:
             raise PN532Error(response[0])
         return response[1:]
 
     def ntag2xx_fast_read_block(self, block_start, block_end):
         """
-        Returns all n * 4 bytes of the card starting from the block_start to the block_end.
+        Returns all n*4 bytes of the card starting from the block_start to the block_end.
         """
-        bytes_returned = block_end - block_start + 1
+        bytes_per_block = 4
+        bytes_returned = bytes_per_block * (block_end - block_start) + 1
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
                                       params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
                                       response_length=bytes_returned)
