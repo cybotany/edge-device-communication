@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from pn532 import PN532_SPI, PN532Error
+from pn532 import PN532_SPI
 
 def extract_uid(pages):
     """
