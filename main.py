@@ -1,5 +1,10 @@
 import RPi.GPIO as GPIO
+import pn532.pn532 as nfc
 from pn532 import PN532_SPI
+
+
+BLOCK_NUMBER = 6
+BLOCK_DATA = bytes([0x00, 0x01, 0x02, 0x03])
 
 if __name__ == '__main__':
     try:
@@ -15,15 +20,19 @@ if __name__ == '__main__':
                 continue
             if uid != last_uid:
                 last_uid = uid
+                uid_hex = [hex(i) for i in uid]
+                if uid_hex not in uid_list:
+                    uid_list.append(uid_hex)
+                    print('Found new card. Extracted UID:', uid_hex)                        
+                else:
+                    print('Found duplicate card. Extracted UID:', uid_hex)
+                
                 try:
-                    uid_hex = [hex(i) for i in uid]
-                    if uid_hex not in uid_list:
-                        uid_list.append(uid_hex)
-                        print('Found new card. Extracted UID:', uid_hex)                        
-                    else:
-                        print('Found duplicate card. Extracted UID:', uid_hex)
-                except Exception as e:
-                    print("Error reading tag:", e)
+                    pn532.ntag2xx_write_block(BLOCK_NUMBER, BLOCK_DATA)
+                    if pn532.ntag2xx_read_block(BLOCK_NUMBER) == BLOCK_DATA:
+                        print('write block %d successfully' % BLOCK_NUMBER)
+                except nfc.PN532Error as e:
+                    print(e.errmsg)
     except Exception as e:
         print(e)
     finally:
