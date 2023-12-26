@@ -236,8 +236,8 @@ class PN532:
         Read a response frame from the PN532.
         """
         response = self._read_data(length + 7)
-        if self.debug:
-            print('Read frame:', [hex(i) for i in response])
+        #if self.debug:
+        #    print('Read frame:', [hex(i) for i in response])
         parsed_data = self._parse_frame(response)
         return parsed_data
 
