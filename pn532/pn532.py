@@ -414,3 +414,25 @@ class PN532:
         except Exception as e:
             print("Error writing NDEF message to the tag:", e)
             return False
+
+    def ntag2xx_dump(self):
+        """
+        Reads all 45 pages (blocks) of the NTAG2xx NFC tag.
+        """
+        print("Reading NTAG2xx NFC tag...")
+
+        all_data = []
+        for block_number in range(45):
+            try:
+                block_data = self.ntag2xx_read_block(block_number)
+                all_data.append(block_data)
+                if self.debug:
+                    print(f"Block {block_number}: {block_data}")
+            except PN532Error as e:
+                print(f"Error reading block {block_number}: {e}")
+                break
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                break
+
+        return all_data
