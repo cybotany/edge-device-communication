@@ -379,7 +379,7 @@ class PN532:
         ndef_record += bytes(record_type, 'utf-8')
         if id:
             ndef_record += bytes(id, 'utf-8')
-        ndef_record += payload
+        ndef_record += bytes(payload, 'utf-8')
 
         if self.debug:
             print(f"Creating NDEF Record: TNF={tnf}, Record Type={record_type}, Payload={payload}, Position={record_position}")
