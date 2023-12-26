@@ -18,8 +18,8 @@ if __name__ == '__main__':
             if uid != last_uid:
                 last_uid = uid
                 try:
-                    #block0 = pn532.ntag2xx_read_block(0)
-                    block0 = pn532.ntag2xx_fast_read_block(0, 3)
+                    block0 = pn532.ntag2xx_read_block(0)
+                    #block0 = pn532.ntag2xx_fast_read_block(0, 3)
                     uid = block0[:7]
                     uid_hex = [hex(i) for i in uid]
 
