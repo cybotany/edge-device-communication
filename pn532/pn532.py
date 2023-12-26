@@ -341,96 +341,51 @@ class PN532:
 
         return all_data
 
-    def create_ndef_record(self, tnf, record_type, payload, record_position='only', language_code='en'):
+    def create_ndef_record(self, tnf, record_type, payload, record_position='only', id=''):
         """
-        Create an NDEF record with specified TNF, record type, payload, and its position in the NDEF message.
-
-        :param tnf: Type Name Format for the record (TNF).
-        :param record_type: Type of the record (e.g., URI, Text).
-        :param payload: Data to store in the record.
-        :param record_position: Position of the record in an NDEF message ('first', 'last', 'only', 'other').
-        :return: NDEF record as a byte array.
+        Expanded implementation to include TNF, type length, payload length, and optional ID.
         """
-        # Set the MB and ME flags based on the record's position
         header = 0b00000000  # Initialize with all flags set to 0
+
+        # Set the MB and ME flags based on record's position
         if record_position == 'first':
-            header |= 0b10000000  # MB=1, ME=0
+            header |= 0b10000000
         elif record_position == 'last':
-            header |= 0b01000000  # MB=0, ME=1
+            header |= 0b01000000
         elif record_position == 'only':
-            header |= 0b11000000  # MB=1, ME=1
+            header |= 0b11000000
 
+        # Add TNF to header
+        header |= tnf & 0b00000111
 
-        header |= tnf  # Add TNF to the header
+        # Determine type length and payload length
+        type_length = len(record_type)
+        payload_length = len(payload)
 
-        # Handling Text record with language code
-        if record_type == 'T':
-            # Create status byte (UTF-8 encoding and language code length)
-            status_byte = 0x00 | len(language_code)
+        # Check if SR flag should be used
+        sr_flag = payload_length < 256
+        header |= 0b00010000 if sr_flag else 0b00000000
 
-            # Encode payload with language code
-            encoded_payload = bytearray([status_byte]) + language_code.encode('utf-8') + payload.encode('utf-8')
-        elif record_type == 'U':
-            # Handling URI payload with URI Identifier Code
-            uri_code = b'\x02'
-            encoded_payload = uri_code + payload.encode('utf-8')
+        # Construct the record header
+        ndef_record = bytearray([header, type_length])
+
+        # Add payload length to the header
+        if sr_flag:
+            ndef_record.append(payload_length)
         else:
-            # Other record types
-            encoded_payload = payload.encode('utf-8')
+            ndef_record += payload_length.to_bytes(4, byteorder='big')
 
-        type_length = len(record_type.encode('utf-8'))
-        payload_length = len(encoded_payload)
-
-        # Set the SR bit based on payload length
-        if payload_length < 256:
-            header |= 0b00010000  # SR=1
-            payload_length_bytes = payload_length.to_bytes(1, 'big')
-        else:
-            payload_length_bytes = payload_length.to_bytes(4, 'big')
-
-        ndef_record = bytearray([header, type_length]) + payload_length_bytes
-        ndef_record += record_type.encode('utf-8') + encoded_payload
+        # Add type, optional ID, and payload to the record
+        ndef_record += bytes(record_type, 'utf-8')
+        if id:
+            ndef_record += bytes(id, 'utf-8')
+        ndef_record += payload
 
         if self.debug:
             print(f"Creating NDEF Record: TNF={tnf}, Record Type={record_type}, Payload={payload}, Position={record_position}")
             print(f"Encoded NDEF Record: {ndef_record}")
 
         return ndef_record
-
-    def create_simple_text_ndef_record(self, text_payload, language_code='en'):
-        """
-        Create a simple NDEF Text record.
-
-        :param text_payload: The text to be stored in the NDEF record.
-        :param language_code: ISO/IANA language code (default: 'en').
-        :return: NDEF record as a byte array.
-        """
-        tnf = 0x01  # TNF (Type Name Format) for Well Known Record
-        record_type = 'T'  # Record Type for Text
-
-        # Create status byte (UTF-8 encoding and language code length)
-        status_byte = 0x00 | len(language_code)
-
-        # Encode payload with language code and text
-        encoded_payload = bytearray([status_byte]) + language_code.encode('utf-8') + text_payload.encode('utf-8')
-
-        type_length = len(record_type.encode('utf-8'))
-        payload_length = len(encoded_payload)
-
-        # Assuming the payload is less than 256 bytes, SR (Short Record) bit is set
-        header = 0b11010000  # MB=1, ME=1, SR=1, TNF=0x01
-
-        payload_length_byte = payload_length.to_bytes(1, 'big')
-
-        ndef_record = bytearray([header, type_length]) + payload_length_byte
-        ndef_record += record_type.encode('utf-8') + encoded_payload
-
-        if self.debug:
-            print(f"Creating Simple NDEF Text Record: Payload={text_payload}, Language Code={language_code}")
-            print(f"Encoded NDEF Record: {ndef_record}")
-
-        return ndef_record
-
 
     def combine_ndef_records(self, records):
         """
