@@ -227,8 +227,8 @@ class PN532:
         Write a frame to the PN532.
         """
         frame = self._build_frame(packet_data)
-        if self.debug:
-            print('Write frame: ', [hex(i) for i in frame])
+        #if self.debug:
+        #    print('Write frame: ', [hex(i) for i in frame])
         self._write_data(bytes(frame))
 
     def _read_frame(self, length):
