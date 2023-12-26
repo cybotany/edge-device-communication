@@ -38,22 +38,13 @@ from .utils.contants import (PN532_ERRORS,
                              _POSTAMBLE,
                              _HOSTTOPN532,
                              _ACK,
-                             _NACK,
                              _ISO14443A,
                              _PN532_CMD_INDATAEXCHANGE,
                              _PN532_CMD_GETFIRMWAREVERSION,
                              _PN532_CMD_SAMCONFIGURATION,
                              _PN532_CMD_INLISTPASSIVETARGET,
-                             _NTAG_CMD_GET_VERSION,
                              _NTAG_CMD_READ,
-                             _NTAG_CMD_FAST_READ,
-                             _NTAG_CMD_COMPATIBILITY_WRITE,
-                             _NTAG_CMD_WRITE,
-                             _NTAG_CMD_READ_CNT,
-                             _NTAG_ADDR_READ_CNT,
-                             _NTAG_CMD_PWD_AUTH,
-                             _NTAG_CMD_READ_SIG,
-                             _NTAG_ADDR_READ_SIG)
+                             _NTAG_CMD_WRITE)
 
 
 class PN532Error(Exception):

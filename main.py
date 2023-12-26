@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from pn532 import *
+from pn532 import PN532_SPI
 
 def extract_uid(pages):
     """
@@ -10,12 +10,9 @@ def extract_uid(pages):
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=False, reset=20, cs=4)
-        #pn532 = PN532_I2C(debug=True, reset=20, req=16)
-        #pn532 = PN532_UART(debug=True, reset=20)
-
         pn532.SAM_configuration()
 
-        print('Waiting for RFID/NFC card...')
+        print('Waiting for an NFC card...')
         uid_list = []
         last_uid = None
 
