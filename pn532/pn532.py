@@ -328,6 +328,11 @@ class PN532:
         ndef_record.append(tnf)
         ndef_record.extend(record_type.encode('utf-8'))
         ndef_record.extend(payload.encode('utf-8'))
+
+        if self.debug:
+            print(f"Creating NDEF Record: TNF={tnf}, Record Type={record_type}, Payload={payload}")
+            print(f"Encoded NDEF Record: {ndef_record}")
+
         return ndef_record
 
     def combine_ndef_records(self, records):
@@ -340,6 +345,11 @@ class PN532:
         ndef_message = bytearray()
         for record in records:
             ndef_message.extend(record)
+
+        if self.debug:
+            print(f"Combining {len(records)} NDEF Records into a single message.")
+            print(f"Combined NDEF Message: {ndef_message}")
+
         return ndef_message
 
     def write_ndef_message(self, ndef_message, start_block=4):
@@ -355,7 +365,15 @@ class PN532:
                 block_data = ndef_message[i:i + 4]
                 if len(block_data) < 4:
                     block_data += b'\x00' * (4 - len(block_data))  # Padding
+
+                if self.debug:
+                    print(f"Writing data to block {start_block + i // 4}: {block_data}")
+
                 self.ntag2xx_write_block(start_block + i // 4, block_data)
+
+            if self.debug:
+                print("Successfully wrote NDEF message to the NFC tag.")
+
             return True
         except Exception as e:
             print("Error writing NDEF message to the tag:", e)
