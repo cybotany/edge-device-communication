@@ -310,7 +310,7 @@ class PN532:
         Returns all n*4 bytes of the card starting from the block_start to the block_end.
         """
         bytes_per_block = 4
-        bytes_returned = bytes_per_block * (block_end - block_start) + 1
+        bytes_returned = bytes_per_block * (block_end - block_start + 1) + 1
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
                                       params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
                                       response_length=bytes_returned)
