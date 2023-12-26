@@ -33,7 +33,8 @@ import time
 
 from .utils.contants import (PN532_ERRORS,
                              _PREAMBLE,
-                             _STARTCODE,
+                             _STARTCODE1,
+                             _STARTCODE2,
                              _POSTAMBLE,
                              _HOSTTOPN532,
                              _ACK,
@@ -96,17 +97,17 @@ class PN532:
         """
         if params is None:
             params = []
-        data = bytearray(2 + len(params))
-        data[0] = _HOSTTOPN532
-        data[1] = command & 0xFF
+        packet_data = bytearray(2 + len(params))
+        packet_data[0] = _HOSTTOPN532
+        packet_data[1] = command & 0xFF
         for i, val in enumerate(params):
-            data[2+i] = val
+            packet_data[2+i] = val
         try:
-            self._write_frame(data)
+            self._write_frame(packet_data)
         except OSError:
             self._wakeup()
             return None
-        if not self._wait_for_ack(timeout):
+        if not self._wait_for_ack():
             return None
         if not self._wait_ready(timeout):
             return None
@@ -178,41 +179,27 @@ class PN532:
         if not data or not 1 < len(data) <= length:
             raise ValueError(f'Data must be an array of 1 to {length} bytes.')
 
-    def _build_frame(self, packet_data=None, frame_type='normal'):
+    def _build_frame(self, packet_data):
         """
-        Handle the construction or parsing of a frame.
-
-        :param data: The data for building or parsing.
-        :param frame: The type of frame used to perform actions between the host and PN532.
-        :return: Constructed or parsed frame.
+        Handle the construction of a frame.
         """
-        frame = _PREAMBLE + _STARTCODE
-        if frame_type == 'normal' and packet_data is not None:
-            packet_length = len(packet_data)
-            self._validate_data_length(packet_data, 255)
-            packet_length_byte = packet_length.to_bytes(1, byteorder='big')
-            frame += packet_length_byte
-
-            packet_length_checksum = (~packet_length + 1 & 0xFF).to_bytes(1, byteorder='big')
-            frame += packet_length_checksum
-            
-            frame += packet_data
-
-            checksum = (sum(packet_data) + sum(_PREAMBLE + _STARTCODE + packet_length_byte + packet_length_checksum)) & 0xFF
-            checksum_byte = (~checksum & 0xFF).to_bytes(1, byteorder='big')
-            frame += checksum_byte
-        elif frame_type == 'ack':
-            frame += _ACK
-        elif frame_type == 'nack':
-            frame += _NACK
-        elif frame_type == 'error':
-            pass
-        frame += _POSTAMBLE
+        packet_length = len(packet_data)
+        frame = bytearray(packet_length + 7)
+        frame[0] = _PREAMBLE
+        frame[1] = _STARTCODE1
+        frame[2] = _STARTCODE2
+        checksum = sum(frame[0:3])
+        frame[3] = packet_length & 0xFF
+        frame[4] = (~packet_length + 1) & 0xFF
+        frame[5:-2] = packet_data
+        checksum += sum(packet_data)
+        frame[-2] = ~checksum & 0xFF
+        frame[-1] = _POSTAMBLE
         return frame
    
     def _parse_frame(self, packet_data):
         """
-        Handle the construction or parsing of a frame.
+        Handle the parsing of a frame.
 
         :param data: The data for building or parsing.
         :param frame: The type of frame used to perform actions between the host and PN532.
@@ -223,26 +210,27 @@ class PN532:
             offset += 1
             if offset >= len(packet_data):
                 raise RuntimeError('Response frame preamble does not contain 0x00FF!')
-            if packet_data[offset] != 0xFF:
-                raise RuntimeError('Response frame preamble does not contain 0x00FF!')
-            offset += 1
-            if offset >= len(packet_data):
-                raise RuntimeError('Response contains no data!')
-            frame_len = packet_data[offset]
-            if (frame_len + packet_data[offset+1]) & 0xFF != 0:
-                raise RuntimeError('Response length checksum did not match length!')
-            checksum = sum(packet_data[offset+2:offset+2+frame_len+1]) & 0xFF
-            if checksum != 0:
-                raise RuntimeError('Response checksum did not match expected value.')
-            parsed_data =  packet_data[offset+2:offset+2+frame_len]
-            return parsed_data
+        if packet_data[offset] != 0xFF:
+            raise RuntimeError('Response frame preamble does not contain 0x00FF!')
+        offset += 1
+        if offset >= len(packet_data):
+            raise RuntimeError('Response contains no data!')
+        
+        frame_len = packet_data[offset]
+        if (frame_len + packet_data[offset+1]) & 0xFF != 0:
+            raise RuntimeError('Response length checksum did not match length!')
+        
+        checksum = sum(packet_data[offset+2:offset+2+frame_len+1]) & 0xFF
+        if checksum != 0:
+            raise RuntimeError('Response checksum did not match expected value.')
+        
+        return packet_data[offset+2:offset+2+frame_len]
 
-    def _write_frame(self, data):
+    def _write_frame(self, packet_data):
         """
         Write a frame to the PN532.
         """
-        self._validate_data_length(data, 255)
-        frame = self._build_frame(data, 'normal')
+        frame = self._build_frame(packet_data)
         self._write_data(bytes(frame))
 
     def _read_frame(self, length):
@@ -250,21 +238,18 @@ class PN532:
         Read a response frame from the PN532.
         """
         response = self._read_data(length + 7)
-        return self._parse_frame(response)
+        if self.debug:
+            print('Read frame:', [hex(i) for i in response])
+        parsed_data = self._parse_frame(response)
+        return parsed_data
 
-    def _wait_for_ack(self, timeout):
+    def _wait_for_ack(self):
         """
         Wait for an ACK response within the given timeout.
-
-        :param timeout: Time to wait for the ACK response.
-        :return: True if ACK received, False otherwise.
         """
-        ack_frame = self._build_frame(frame_type='ack')
-        start_time = time.time()
-        while (time.time() - start_time) < timeout:
-            ack = self._read_data(len(ack_frame))
-            if ack == ack_frame:
-                return True
+        ack = self._read_data(len(_ACK))
+        if ack == _ACK:
+            return True
         return False
 
     def SAM_configuration(self):
@@ -285,12 +270,22 @@ class PN532:
         The goal of this command is to detect as many targets (maximum MaxTg)
         as possible in passive mode. 
         """
-        response = self._call_function(_PN532_CMD_INLISTPASSIVETARGET,
-                                       params=[0x01, card_baud],
-                                       response_length=19,
-                                       timeout=timeout)
-        if not response or response[0] != 0x01 or response[5] > 7:
+        try:
+            response = self._call_function(_PN532_CMD_INLISTPASSIVETARGET,
+                                        params=[0x01, card_baud],
+                                        response_length=19,
+                                        timeout=timeout)
+        except BusyError:
             return None
+        # If no response is available return None to indicate no card is present.
+        if response is None:
+            return None
+        # Check only 1 card with up to a 7 byte UID is present.
+        if response[0] != 0x01:
+            raise RuntimeError('More than one card detected!')
+        if response[5] > 7:
+            raise RuntimeError('Found card with unexpectedly long UID!')
+        # Return UID of card.
         return response[6:6 + response[5]]
 
     def ntag2xx_write_block(self, block_number, data):

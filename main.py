@@ -20,7 +20,7 @@ if __name__ == '__main__':
         last_uid = None
 
         while True:
-            uid = pn532.read_passive_target(timeout=0.5)
+            uid = pn532.list_passive_target(timeout=0.5)
             if uid is None:
                 continue
             if uid != last_uid:
@@ -37,10 +37,6 @@ if __name__ == '__main__':
                     if uid_hex not in uid_list:
                         uid_list.append(uid_hex)
                         print('Found new card. Extracted UID:', uid_hex)
-
-                        #version_info = pn532.ntag2xx_get_version()
-                        #print('NTAG Version Information:', version_info)
-
                     else:
                         print('Found duplicate card. Extracted UID:', uid_hex)
                 except Exception as e:
