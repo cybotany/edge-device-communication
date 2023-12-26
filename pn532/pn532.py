@@ -315,6 +315,32 @@ class PN532:
             raise PN532Error(response[0])
         return response[1:][:4]
 
+    def ntag2xx_dump(self, start_block=0, end_block=44):
+        """
+        Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
+        Defaults to reading all 45 blocks if no range is specified.
+
+        :param start_block: The starting block number (inclusive).
+        :param end_block: The ending block number (inclusive).
+        """
+        print(f"Reading NTAG2xx NFC tag from block {start_block} to block {end_block}...")
+
+        all_data = []
+        for block_number in range(start_block, end_block + 1):
+            try:
+                block_data = self.ntag2xx_read_block(block_number)
+                all_data.append(block_data)
+                if self.debug:
+                    print(f"Block {block_number}: {block_data}")
+            except PN532Error as e:
+                print(f"Error reading block {block_number}: {e}")
+                break
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                break
+
+        return all_data
+
     def create_ndef_record(self, tnf, record_type, payload, record_position='only', language_code='en'):
         """
         Create an NDEF record with specified TNF, record type, payload, and its position in the NDEF message.
@@ -371,6 +397,41 @@ class PN532:
 
         return ndef_record
 
+    def create_simple_text_ndef_record(self, text_payload, language_code='en'):
+        """
+        Create a simple NDEF Text record.
+
+        :param text_payload: The text to be stored in the NDEF record.
+        :param language_code: ISO/IANA language code (default: 'en').
+        :return: NDEF record as a byte array.
+        """
+        tnf = 0x01  # TNF (Type Name Format) for Well Known Record
+        record_type = 'T'  # Record Type for Text
+
+        # Create status byte (UTF-8 encoding and language code length)
+        status_byte = 0x00 | len(language_code)
+
+        # Encode payload with language code and text
+        encoded_payload = bytearray([status_byte]) + language_code.encode('utf-8') + text_payload.encode('utf-8')
+
+        type_length = len(record_type.encode('utf-8'))
+        payload_length = len(encoded_payload)
+
+        # Assuming the payload is less than 256 bytes, SR (Short Record) bit is set
+        header = 0b11010000  # MB=1, ME=1, SR=1, TNF=0x01
+
+        payload_length_byte = payload_length.to_bytes(1, 'big')
+
+        ndef_record = bytearray([header, type_length]) + payload_length_byte
+        ndef_record += record_type.encode('utf-8') + encoded_payload
+
+        if self.debug:
+            print(f"Creating Simple NDEF Text Record: Payload={text_payload}, Language Code={language_code}")
+            print(f"Encoded NDEF Record: {ndef_record}")
+
+        return ndef_record
+
+
     def combine_ndef_records(self, records):
         """
         Combine multiple NDEF records into a single NDEF message.
@@ -414,29 +475,3 @@ class PN532:
         except Exception as e:
             print("Error writing NDEF message to the tag:", e)
             return False
-
-    def ntag2xx_dump(self, start_block=0, end_block=44):
-        """
-        Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
-        Defaults to reading all 45 blocks if no range is specified.
-
-        :param start_block: The starting block number (inclusive).
-        :param end_block: The ending block number (inclusive).
-        """
-        print(f"Reading NTAG2xx NFC tag from block {start_block} to block {end_block}...")
-
-        all_data = []
-        for block_number in range(start_block, end_block + 1):
-            try:
-                block_data = self.ntag2xx_read_block(block_number)
-                all_data.append(block_data)
-                if self.debug:
-                    print(f"Block {block_number}: {block_data}")
-            except PN532Error as e:
-                print(f"Error reading block {block_number}: {e}")
-                break
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-                break
-
-        return all_data

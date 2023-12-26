@@ -24,12 +24,12 @@ if __name__ == '__main__':
                     print('Found duplicate card. Extracted UID:', uid_hex)
                 
                 try:
-                    ntag_data = pn532.ntag2xx_dump(start_block=0, end_block=9)
-                    #record1 = pn532.create_ndef_record(tnf=0x01, record_type='T', payload='Testing', record_position='only')
+                    #ntag_data = pn532.ntag2xx_dump(start_block=4, end_block=9)
+                    record1 = pn532.create_simple_text_ndef_record(text_payload='Testing')
                     #record2 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='microsoft.com', record_position='middle')
                     #record3 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='yahoo.com', record_position='last')
-                    #ndef_message = pn532.combine_ndef_records([record1])                   
-                    #pn532.write_ndef_message(ndef_message)
+                    ndef_message = pn532.combine_ndef_records([record1])                   
+                    pn532.write_ndef_message(ndef_message)
                 except nfc.PN532Error as e:
                     print(e.errmsg)
     except Exception as e:
