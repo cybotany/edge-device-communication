@@ -29,7 +29,9 @@ if __name__ == '__main__':
                 
                 try:
                     pn532.ntag2xx_write_block(BLOCK_NUMBER, BLOCK_DATA)
-                    if pn532.ntag2xx_read_block(BLOCK_NUMBER) == BLOCK_DATA:
+                    BLOCK_OUTPUT = pn532.ntag2xx_read_block(BLOCK_NUMBER)
+                    print('read block %d: %s' % (BLOCK_NUMBER, BLOCK_OUTPUT))
+                    if BLOCK_OUTPUT == BLOCK_DATA:
                         print('write block %d successfully' % BLOCK_NUMBER)
                     else:
                         print('write block %d failed' % BLOCK_NUMBER)
