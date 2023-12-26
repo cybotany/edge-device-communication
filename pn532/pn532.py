@@ -94,8 +94,6 @@ class PN532:
         packet_data[1] = command & 0xFF
         for i, val in enumerate(params):
             packet_data[2+i] = val
-        if self.debug:
-            print('Packet data: ', [hex(i) for i in packet_data])
         try:
             self._write_frame(packet_data)
         except OSError:
@@ -248,6 +246,8 @@ class PN532:
         """
         ack = self._read_data(len(_ACK))
         if ack == _ACK:
+            if self.debug:
+                print('Received ACK.')
             return True
         return False
 
