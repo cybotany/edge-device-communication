@@ -29,8 +29,8 @@ if __name__ == '__main__':
                 
                 try:
                     pn532.ntag2xx_write_block(BLOCK_NUMBER, BLOCK_DATA)
-                    if pn532.ntag2xx_read_block(BLOCK_NUMBER) == BLOCK_DATA:
-                        print('write block %d successfully' % BLOCK_NUMBER)
+                    #if pn532.ntag2xx_read_block(BLOCK_NUMBER) == BLOCK_DATA:
+                    #    print('write block %d successfully' % BLOCK_NUMBER)
                 except nfc.PN532Error as e:
                     print(e.errmsg)
     except Exception as e:
