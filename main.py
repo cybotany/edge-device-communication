@@ -8,6 +8,7 @@ if __name__ == '__main__':
 
         print('Waiting for an NFC card...')
         uid_list = []
+        ntag_version_list = []
         last_uid = None
 
         while True:
@@ -24,7 +25,11 @@ if __name__ == '__main__':
                     if uid_hex not in uid_list:
                         uid_list.append(uid_hex)
                         print('Found new card. Extracted UID:', uid_hex)
-
+                        
+                        ntag_version = pn532.ntag2xx_get_version()
+                        ntag_version_hex = [hex(i) for i in ntag_version]
+                        ntag_version_list.append(ntag_version_hex)
+                        print('Extracted NTAG Version:', ntag_version_hex)
                     else:
                         print('Found duplicate card. Extracted UID:', uid_hex)
                 except Exception as e:
