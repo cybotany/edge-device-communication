@@ -226,8 +226,8 @@ class PN532:
         Write a frame to the PN532.
         """
         frame = self._build_frame(packet_data)
-        #if self.debug:
-        #    print('Write frame: ', [hex(i) for i in frame])
+        if self.debug:
+            print('Write frame: ', [hex(i) for i in frame])
         self._write_data(bytes(frame))
 
     def _read_frame(self, length):
@@ -235,8 +235,8 @@ class PN532:
         Read a response frame from the PN532.
         """
         response = self._read_data(length + 7)
-        #if self.debug:
-        #    print('Read frame:', [hex(i) for i in response])
+        if self.debug:
+            print('Read frame:', [hex(i) for i in response])
         parsed_data = self._parse_frame(response)
         return parsed_data
 
