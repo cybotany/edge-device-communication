@@ -172,8 +172,8 @@ class PN532_SPI(PN532):
         frame = self._spi.xfer(frame)
         for i, val in enumerate(frame):
             frame[i] = reverse_bit(val)
-        if self.debug:
-            print("Reading: ", [hex(i) for i in frame[1:]])
+        #if self.debug:
+        #    print("Reading: ", [hex(i) for i in frame[1:]])
         return frame[1:]
 
     def _write_data(self, framebytes):
@@ -181,7 +181,7 @@ class PN532_SPI(PN532):
         Write a specified count of bytes to the PN532
         """
         rev_frame = [reverse_bit(x) for x in bytes([_SPI_DATAWRITE]) + framebytes]
-        if self.debug:
-            print("Writing: ", [hex(i) for i in rev_frame])
+        #if self.debug:
+        #    print("Writing: ", [hex(i) for i in rev_frame])
         time.sleep(0.02)
         self._spi.writebytes(bytes(rev_frame))
