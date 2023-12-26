@@ -4,7 +4,7 @@ from pn532 import PN532_SPI
 
 
 BLOCK_NUMBER = 6
-BLOCK_DATA = bytes([0x00, 0x01, 0x02, 0x03])
+BLOCK_DATA = bytes([0x01, 0x02, 0x03, 0x04])
 
 if __name__ == '__main__':
     try:
@@ -28,13 +28,11 @@ if __name__ == '__main__':
                     print('Found duplicate card. Extracted UID:', uid_hex)
                 
                 try:
-                    pn532.ntag2xx_write_block(BLOCK_NUMBER, BLOCK_DATA)
-                    BLOCK_OUTPUT = pn532.ntag2xx_read_block(BLOCK_NUMBER)[:4]
-                    print('read block %d: %s' % (BLOCK_NUMBER, BLOCK_OUTPUT))
-                    if BLOCK_OUTPUT == BLOCK_DATA:
-                        print('write block %d successfully' % BLOCK_NUMBER)
-                    else:
-                        print('write block %d failed' % BLOCK_NUMBER)
+                    record1 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='https://www.google.com')
+                    record2 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='https://www.microsoft.com')
+                    record3 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='https://www.yahoo.com')
+                    ndef_message = pn532.combine_ndef_records([record1, record2, record3])
+                    pn532.write_ndef_message(ndef_message)
                 except nfc.PN532Error as e:
                     print(e.errmsg)
     except Exception as e:

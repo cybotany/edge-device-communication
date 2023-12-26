@@ -44,8 +44,7 @@ from .utils.contants import (PN532_ERRORS,
                              _PN532_CMD_SAMCONFIGURATION,
                              _PN532_CMD_INLISTPASSIVETARGET,
                              _NTAG_CMD_READ,
-                             _NTAG_CMD_WRITE,
-                             _NTAG_CMD_FAST_READ)
+                             _NTAG_CMD_WRITE)
 
 
 class PN532Error(Exception):
@@ -196,8 +195,7 @@ class PN532:
         """
         Handle the parsing of a frame.
 
-        :param data: The data for building or parsing.
-        :param frame: The type of frame used to perform actions between the host and PN532.
+        :param data: The data for parsing.
         :return: Constructed or parsed frame.
         """
         offset = 0
@@ -315,20 +313,50 @@ class PN532:
                                        response_length=17)
         if response[0]:
             raise PN532Error(response[0])
-        return response[1:]
+        return response[1:][:4]
 
-    def ntag2xx_fast_read_block(self, block_start, block_end):
+    def create_ndef_record(self, tnf, record_type, payload):
         """
-        Returns all n*4 bytes of the card starting from the block_start to the block_end.
+        Create an NDEF record.
+
+        :param tnf: Type Name Format for the record
+        :param record_type: Type of the record (e.g., URI, Text)
+        :param payload: Data to store in the record
+        :return: NDEF record as a byte array
         """
-        bytes_per_block = 4
-        blocks_included = block_end - block_start + 1
-        bytes_returned = bytes_per_block * blocks_included + 1 # +1 for status byte
-        response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                       params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
-                                       response_length=bytes_returned)
-        if response[0]:
-            raise PN532Error(response[0])
-        #if self.debug:
-        #    print('Read block:', [hex(i) for i in response[1:]])
-        return response[1:]
+        ndef_record = bytearray()
+        ndef_record.append(tnf)
+        ndef_record.extend(record_type.encode('utf-8'))
+        ndef_record.extend(payload.encode('utf-8'))
+        return ndef_record
+
+    def combine_ndef_records(self, records):
+        """
+        Combine multiple NDEF records into a single NDEF message.
+
+        :param records: List of NDEF records
+        :return: Combined NDEF message as a byte array
+        """
+        ndef_message = bytearray()
+        for record in records:
+            ndef_message.extend(record)
+        return ndef_message
+
+    def write_ndef_message(self, ndef_message, start_block=4):
+        """
+        Write an NDEF message to an NTAG2XX NFC tag.
+
+        :param ndef_message: NDEF message as a byte array (can contain multiple records)
+        :param start_block: Starting block number to write the message
+        :return: True if write is successful, False otherwise
+        """
+        try:
+            for i in range(0, len(ndef_message), 4):
+                block_data = ndef_message[i:i + 4]
+                if len(block_data) < 4:
+                    block_data += b'\x00' * (4 - len(block_data))  # Padding
+                self.ntag2xx_write_block(start_block + i // 4, block_data)
+            return True
+        except Exception as e:
+            print("Error writing NDEF message to the tag:", e)
+            return False
