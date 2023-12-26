@@ -300,7 +300,7 @@ class PN532:
         """
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
                                       params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
-                                      response_length=17)
+                                      response_length=16)
         if response[0]:
             raise PN532Error(response[0])
         return response[1:]
