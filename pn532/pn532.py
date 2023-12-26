@@ -115,7 +115,10 @@ class PN532:
                                        timeout=0.5)
         if response is None:
             raise RuntimeError('Failed to detect the PN532')
-        return tuple(response)
+        ic, ver, rev, support = tuple(response)
+        if self.debug:
+            print(f'Found PN532 with firmware version: {ver}.{rev}')
+        return
 
     def _initialize(self):
         """
@@ -123,11 +126,10 @@ class PN532:
         """
         self._wakeup()
         try:
-            ic, ver, rev, support = self._get_firmware_version()
+            self._get_firmware_version()
         except (BusyError, RuntimeError):
-            ic, ver, rev, support = self._get_firmware_version()
-        if self.debug:
-            print('Found PN532 with firmware version: {0}.{1}'.format(ver, rev))
+            self._get_firmware_version()
+            self.SAM_configuration()
 
     def _reset(self, pin):
         """
@@ -225,6 +227,8 @@ class PN532:
         Write a frame to the PN532.
         """
         frame = self._build_frame(packet_data)
+        if self.debug:
+            print('Write frame: ', [hex(i) for i in frame])
         self._write_data(bytes(frame))
 
     def _read_frame(self, length):
@@ -310,10 +314,13 @@ class PN532:
         Returns all n*4 bytes of the card starting from the block_start to the block_end.
         """
         bytes_per_block = 4
-        bytes_returned = bytes_per_block * (block_end - block_start + 1) + 1
+        blocks_included = block_end - block_start + 1
+        bytes_returned = bytes_per_block * blocks_included + 1 # +1 for status byte
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
                                       params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
                                       response_length=bytes_returned)
         if response[0]:
             raise PN532Error(response[0])
+        if self.debug:
+            print('Read block:', [hex(i) for i in response[1:]])
         return response[1:]
