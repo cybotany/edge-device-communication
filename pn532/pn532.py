@@ -300,8 +300,8 @@ class PN532:
         params[3:] = data
 
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                      params=params,
-                                      response_length=1)
+                                       params=params,
+                                       response_length=1)
         if response[0]:
             raise PN532Error(response[0])
         return response[0] == 0x00
@@ -311,8 +311,8 @@ class PN532:
         Read a block of data from the card.
         """
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                      params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
-                                      response_length=17)
+                                       params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
+                                       response_length=17)
         if response[0]:
             raise PN532Error(response[0])
         return response[1:]
@@ -325,8 +325,8 @@ class PN532:
         blocks_included = block_end - block_start + 1
         bytes_returned = bytes_per_block * blocks_included + 1 # +1 for status byte
         response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                      params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
-                                      response_length=bytes_returned)
+                                       params=[0x01, _NTAG_CMD_FAST_READ, block_start & 0xFF, block_end & 0xFF],
+                                       response_length=bytes_returned)
         if response[0]:
             raise PN532Error(response[0])
         #if self.debug:
