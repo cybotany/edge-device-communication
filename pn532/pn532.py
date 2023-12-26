@@ -338,11 +338,8 @@ class PN532:
 
         # Handling URI payload with URI Identifier Code
         if record_type == 'U':
-            if payload.startswith("https://www."):
-                uri_code = b'\x02'  # Code for "https://www."
-                encoded_payload = uri_code + payload[12:].encode('utf-8')
-            else:
-                raise ValueError("Unsupported URL format")
+            uri_code = b'\x02'
+            encoded_payload = uri_code + payload.encode('utf-8')
         else:
             encoded_payload = payload.encode('utf-8')
 
