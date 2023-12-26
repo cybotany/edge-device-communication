@@ -3,8 +3,6 @@ import RPi.GPIO as GPIO
 import pn532.pn532 as nfc
 from pn532 import PN532_SPI
 
-API_URL = 'http://10.0.0.218:8080/api/create/link/'
-
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=True, reset=20, cs=4)
@@ -18,12 +16,14 @@ if __name__ == '__main__':
             if uid is None:
                 continue
             if uid != last_uid:
+                last_uid = uid
                 # Convert UID to string format
                 uid_str = ':'.join(['{:02X}'.format(i) for i in uid])
                 if uid_str not in uid_list:
                     uid_list.append(uid_str)
                     print('Found new card. Extracted UID:', uid_str)
                     # Send UID to Django API
+                    API_URL = f'http://10.0.0.218:8080/api/create/link/{uid_str}/'
                     try:
                         response = requests.post(API_URL, data={'uid': uid_str})
                         if response.status_code == 201:
