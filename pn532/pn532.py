@@ -462,7 +462,7 @@ class PN532:
 
         return all_data
 
-    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=None):
+    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=0):
         """
         Method to create the NDEF record with debug statements.
         """
