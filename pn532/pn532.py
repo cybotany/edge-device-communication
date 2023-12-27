@@ -464,7 +464,7 @@ class PN532:
 
     def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
         """
-        Method to create the NDEF record.
+        Method to create the NDEF record with debug statements.
         """
         # Message Begin (MB), Message End (ME), and Chunk Flag (CF) bits
         MB = 0x80 if record_position == 'only' or record_position == 'first' else 0x00
@@ -479,33 +479,42 @@ class PN532:
 
         # Combine TNF with flags into a single byte
         message_flags = MB | ME | CF | SR | IL | tnf
+        print(f"Message Flags: {message_flags:02x}")
 
         # Type length
         type_length = len(record_type).to_bytes(1, byteorder='big')
+        print(f"Type Length: {type_length.hex()}")
 
         # Payload length: 1 byte if SR is set; 4 bytes otherwise
         if SR:
             payload_length = len(payload).to_bytes(1, byteorder='big')
         else:
             payload_length = len(payload).to_bytes(4, byteorder='big')
+        print(f"Payload Length: {payload_length.hex()}")
 
         # ID length: Present only if IL is set
         id_length = len(id).to_bytes(1, byteorder='big') if IL else b''
+        print(f"ID Length: {id_length.hex()}")
 
         # Record type: Convert type to bytes
         record_type_bytes = record_type.encode()
+        print(f"Record Type Bytes: {record_type_bytes.hex()}")
 
         # ID: Convert ID to bytes
         id_bytes = id.encode()
+        print(f"ID Bytes: {id_bytes.hex()}")
 
         # Combine everything to form the header
-        header = bytes([message_flags]) + bytes([type_length]) + payload_length + id_length + record_type_bytes + id_bytes
+        header = bytes([message_flags]) + type_length + payload_length + id_length + record_type_bytes + id_bytes
+        print(f"Header: {header.hex()}")
 
         # Complete record: Header + Payload
         complete_record = header + payload.encode()
+        print(f"Complete Record (Before Terminator): {complete_record.hex()}")
 
         # Append the Record Terminator TLV (0xFE) to the end of the record
         complete_record += b'\xFE'
+        print(f"Complete Record (With Terminator): {complete_record.hex()}")
 
         return complete_record
 
