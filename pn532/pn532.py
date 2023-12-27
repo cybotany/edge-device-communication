@@ -462,32 +462,32 @@ class PN532:
 
         return all_data
 
-    def create_ndef_record(self, tnf, record_type, payload, record_position='only', id=''):
+    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
         """
         Method to create the NDEF record.
         """
         # Message Begin (MB), Message End (ME), and Chunk Flag (CF) bits
-        MB = 0x80 if record_position == 'only' or record_position == 'first' else 0
-        ME = 0x40 if record_position == 'only' or record_position == 'last' else 0
-        CF = 0x20 if record_position == 'middle' else 0
+        MB = 0x80 if record_position == 'only' or record_position == 'first' else 0x00
+        ME = 0x40 if record_position == 'only' or record_position == 'last' else 0x00
+        CF = 0x20 if record_position == 'middle' else 0x00
 
         # Short Record (SR) bit: True if payload length is less than 256
-        SR = 0x10 if len(payload) < 256 else 0
+        SR = 0x10 if len(payload) < 256 else 0x00
 
         # ID Length (IL) bit: True if ID is present
-        IL = 0x08 if id else 0
+        IL = 0x08 if id else 0x00
 
         # Combine TNF with flags into a single byte
-        flags_tnf = MB | ME | CF | SR | IL | tnf
+        message_flags = MB | ME | CF | SR | IL | tnf
 
         # Type length
-        type_length = len(record_type)
+        type_length = len(record_type).to_bytes(1, byteorder='big')
 
-        # Payload length: 4 bytes if SR is set; 1 byte otherwise
+        # Payload length: 1 byte if SR is set; 4 bytes otherwise
         if SR:
-            payload_length = len(payload).to_bytes(4, byteorder='big')
-        else:
             payload_length = len(payload).to_bytes(1, byteorder='big')
+        else:
+            payload_length = len(payload).to_bytes(4, byteorder='big')
 
         # ID length: Present only if IL is set
         id_length = len(id).to_bytes(1, byteorder='big') if IL else b''
@@ -499,7 +499,7 @@ class PN532:
         id_bytes = id.encode()
 
         # Combine everything to form the header
-        header = bytes([flags_tnf]) + bytes([type_length]) + payload_length + id_length + record_type_bytes + id_bytes
+        header = bytes([message_flags]) + bytes([type_length]) + payload_length + id_length + record_type_bytes + id_bytes
 
         # Complete record: Header + Payload
         complete_record = header + payload.encode()
