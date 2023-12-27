@@ -462,7 +462,7 @@ class PN532:
 
         return all_data
 
-    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
+    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=None):
         """
         Method to create the NDEF record with debug statements.
         """
@@ -479,18 +479,17 @@ class PN532:
 
         # Combine TNF with flags into a single byte
         message_flags = MB | ME | CF | SR | IL | tnf
-        print(f"TNF: {tnf:02x}")
         print(f"Message Flags: {message_flags:02x}")
 
         # Type length
         type_length = len(record_type).to_bytes(1, byteorder='big')
         print(f"Type Length: {type_length.hex()}")
 
-        # Payload length: 4 bytes if SR is set; 1 byte otherwise
+        # Payload length: 1 if SR is set; 4 otherwise
         if SR:
-            payload_length = len(payload).to_bytes(4, byteorder='big')
-        else:
             payload_length = len(payload).to_bytes(1, byteorder='big')
+        else:
+            payload_length = len(payload).to_bytes(4, byteorder='big')
         print(f"Payload Length: {payload_length.hex()}")
 
         # ID length: Present only if IL is set
