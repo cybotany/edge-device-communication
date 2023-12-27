@@ -517,7 +517,7 @@ class PN532:
             payload = payload.encode()
 
         # Complete record: Header + Payload
-        complete_record = header + payload.encode()
+        complete_record = header + payload
         print(f"Complete Record (Before Terminator): {complete_record.hex()}")
 
         # Append the Record Terminator TLV (0xFE) to the end of the record
