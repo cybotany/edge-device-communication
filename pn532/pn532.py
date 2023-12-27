@@ -446,9 +446,13 @@ class PN532:
         for block_number in range(start_block, end_block + 1):
             try:
                 block_data = self.ntag2xx_read_block(block_number)
-                all_data.append(block_data)
+
+                # Format each byte in block_data as two-character hexadecimal string
+                formatted_block_data = ' '.join(['%02X' % x for x in block_data])
+                all_data.append(formatted_block_data)
+
                 if self.debug:
-                    print(f"Block {block_number}: {block_data}")
+                    print(f"Block {block_number}: {formatted_block_data}")
             except PN532Error as e:
                 print(f"Error reading block {block_number}: {e}")
                 break
