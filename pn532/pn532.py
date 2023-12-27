@@ -462,15 +462,19 @@ class PN532:
 
         return all_data
 
-    def _create_ndef_record_header(self, tnf, record_type, payload, record_position='only', id=''):
+    def create_ndef_record(self, tnf, record_type, payload, record_position='only', id=''):
         """
-        Method to create the NDEF record header.
+        Method to create the NDEF record.
         """
-        # Determine the message flags based on record position and payload length
-        MB = 0x80 if record_position in ['only', 'first'] else 0
-        ME = 0x40 if record_position in ['only', 'last'] else 0
-        CF = 0x20 if record_position in ['first', 'middle'] else 0
+        # Message Begin (MB), Message End (ME), and Chunk Flag (CF) bits
+        MB = 0x80 if record_position == 'only' or record_position == 'first' else 0
+        ME = 0x40 if record_position == 'only' or record_position == 'last' else 0
+        CF = 0x20 if record_position == 'middle' else 0
+
+        # Short Record (SR) bit: True if payload length is less than 256
         SR = 0x10 if len(payload) < 256 else 0
+
+        # ID Length (IL) bit: True if ID is present
         IL = 0x08 if id else 0
 
         # Combine TNF with flags into a single byte
@@ -478,25 +482,29 @@ class PN532:
 
         # Type length
         type_length = len(record_type)
-        type_length_byte = type_length.to_bytes(1, 'big')
 
-        # Payload length
-        payload_length = len(payload).to_bytes(1, byteorder='big') if SR else len(payload).to_bytes(4, byteorder='big')
+        # Payload length: 4 bytes if SR is set; 1 byte otherwise
+        if SR:
+            payload_length = len(payload).to_bytes(4, byteorder='big')
+        else:
+            payload_length = len(payload).to_bytes(1, byteorder='big')
 
-        # ID length
+        # ID length: Present only if IL is set
         id_length = len(id).to_bytes(1, byteorder='big') if IL else b''
 
+        # Record type: Convert type to bytes
+        record_type_bytes = record_type.encode()
+
+        # ID: Convert ID to bytes
+        id_bytes = id.encode()
+
         # Combine everything to form the header
-        header = bytes([flags_tnf, type_length]) + payload_length + id_length + record_type.encode() + id.encode()
+        header = bytes([flags_tnf]) + bytes([type_length]) + payload_length + id_length + record_type_bytes + id_bytes
 
-        return header
+        # Complete record: Header + Payload
+        complete_record = header + payload.encode()
 
-    def create_ndef_record(self, tnf, record_type, payload, record_position='only', id=''):
-        """
-        Expanded implementation to include TNF, type length, payload length, and optional ID.
-        """
-        pass
-
+        return complete_record
 
     def combine_ndef_records(self, records):
         """
@@ -515,7 +523,7 @@ class PN532:
 
         return ndef_message
 
-    def write_ndef_message(self, ndef_message, start_block=4):
+    def write_ndef_message(self, ndef_message, start_block=5):
         """
         Write an NDEF message to an NTAG2XX NFC tag.
 
