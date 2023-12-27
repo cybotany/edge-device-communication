@@ -504,6 +504,9 @@ class PN532:
         # Complete record: Header + Payload
         complete_record = header + payload.encode()
 
+        # Append the Record Terminator TLV (0xFE) to the end of the record
+        complete_record += b'\xFE'
+
         return complete_record
 
     def combine_ndef_records(self, records):
