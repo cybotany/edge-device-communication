@@ -479,17 +479,18 @@ class PN532:
 
         # Combine TNF with flags into a single byte
         message_flags = MB | ME | CF | SR | IL | tnf
+        print(f"TNF: {tnf:02x}")
         print(f"Message Flags: {message_flags:02x}")
 
         # Type length
         type_length = len(record_type).to_bytes(1, byteorder='big')
         print(f"Type Length: {type_length.hex()}")
 
-        # Payload length: 1 byte if SR is set; 4 bytes otherwise
+        # Payload length: 4 bytes if SR is set; 1 byte otherwise
         if SR:
-            payload_length = len(payload).to_bytes(1, byteorder='big')
-        else:
             payload_length = len(payload).to_bytes(4, byteorder='big')
+        else:
+            payload_length = len(payload).to_bytes(1, byteorder='big')
         print(f"Payload Length: {payload_length.hex()}")
 
         # ID length: Present only if IL is set
@@ -507,6 +508,13 @@ class PN532:
         # Combine everything to form the header
         header = bytes([message_flags]) + type_length + payload_length + id_length + record_type_bytes + id_bytes
         print(f"Header: {header.hex()}")
+
+        # Prepend URI identifier code if the record type is 'U' (URL)
+        if record_type == 'U':
+            uri_identifier_code = b'\x03'  # 0x03 for 'http://'
+            payload = uri_identifier_code + payload.encode()
+        else:
+            payload = payload.encode()
 
         # Complete record: Header + Payload
         complete_record = header + payload.encode()
