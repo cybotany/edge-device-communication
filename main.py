@@ -23,9 +23,9 @@ if __name__ == '__main__':
                     uid_list.append(uid_str)
                     print('Found new card. Extracted UID:', uid_str)
                     # Send UID to Django API
-                    #API_URL = f'http://10.0.0.218:8080/api/create/link/{uid_str}/'
+                    #api_url = f'http://10.0.0.218:8080/api/create/link/{uid_str}/'
                     #try:
-                    #    response = requests.post(API_URL, data={'uid': uid_str})
+                    #    response = requests.post(api_url, data={'uid': uid_str})
                     #    if response.status_code == 201:
                     #        print('Link created successfully in Django app.')
                     #    else:
@@ -33,7 +33,8 @@ if __name__ == '__main__':
                     #except requests.exceptions.RequestException as e:
                     #    print('Error communicating with Django app:', e)  
                     try:
-                        record1 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='digidex.app', record_position='only')
+                        ndef_url = f'10.0.0.218:8080/link/{uid_str}/'
+                        record1 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload=ndef_url, record_position='only')
                         ndef_message = pn532.combine_ndef_records([record1])                   
                         pn532.write_ndef_message(ndef_message)
                         ntag_data = pn532.ntag2xx_dump(start_block=0, end_block=20)
