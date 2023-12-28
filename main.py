@@ -33,7 +33,7 @@ if __name__ == '__main__':
                     #except requests.exceptions.RequestException as e:
                     #    print('Error communicating with Django app:', e)  
                     try:
-                        record1 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='10.0.0.218:8080/link/04:CA:23:EA:5D:11:90', record_position='only')
+                        record1 = pn532.create_ndef_record(tnf=0x01, record_type='U', payload='digidex.app', record_position='only')
                         ndef_message = pn532.combine_ndef_records([record1])                   
                         pn532.write_ndef_message(ndef_message)
                         ntag_data = pn532.ntag2xx_dump(start_block=0, end_block=20)
