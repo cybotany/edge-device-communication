@@ -519,11 +519,24 @@ class PN532:
         complete_record = header + payload
         print(f"Complete Record (Before Terminator): {complete_record.hex()}")
 
-        # Append the Record Terminator TLV (0xFE) to the end of the record
-        complete_record += b'\xFE'
-        print(f"Complete Record (With Terminator): {complete_record.hex()}")
+        # TLV Type for NDEF Message
+        tlv_type = b'\x03'
 
-        return complete_record
+        # Calculate TLV Length
+        ndef_length = len(complete_record)
+        if ndef_length < 255:
+            tlv_length = bytes([ndef_length])
+        else:
+            tlv_length = b'\xFF' + ndef_length.to_bytes(2, byteorder='big')
+
+        # Construct the TLV structure
+        tlv = tlv_type + tlv_length + complete_record
+
+        # Append the Record Terminator TLV (0xFE) to the end of the record
+        tlv += b'\xFE'
+        print(f"Complete Record (With Terminator): {tlv.hex()}")
+
+        return tlv
 
     def combine_ndef_records(self, records):
         """
