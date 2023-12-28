@@ -530,7 +530,7 @@ class PN532:
             tlv_length = b'\xFF' + ndef_length.to_bytes(2, byteorder='big')
 
         # Construct the TLV structure
-        tlv = tlv_type + tlv_length + complete_record
+        tlv = b'\x34' + tlv_type + tlv_length + complete_record
 
         # Append the Record Terminator TLV (0xFE) to the end of the record
         tlv += b'\xFE'
