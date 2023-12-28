@@ -487,7 +487,7 @@ class PN532:
 
         # Prepend URI identifier code if the record type is 'U' (URL)
         if record_type == 'U':
-            uri_identifier_code = b'\x04'  # 0x03 for 'http://'
+            uri_identifier_code = b'\x02'  # 0x03 for 'http://'
             payload = uri_identifier_code + payload.encode()
         else:
             payload = payload.encode()
