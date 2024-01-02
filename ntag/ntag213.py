@@ -48,37 +48,47 @@ _NDEF_URIPREFIX_URN_EPC_RAW = 0x21
 _NDEF_URIPREFIX_URN_EPC = 0x22
 _NDEF_URIPREFIX_URN_NFC = 0x23
 
+_CONFIG_PAGE_START = 0x29
+_CONFIG_PAGE_END = 0x2C
+
+_MIRROR_CONF_BIT = 7
+_MIRROR_BYTE_BIT = 6
+
 
 class NTAG213:
     def __init__(self, pn532, debug=False):
+        # Initialize memory: 45 pages, 4 bytes per page
         self.pn532 = pn532
         self.debug = debug
+        self.memory = [[0x00 for _ in range(4)] for _ in range(45)]
+        self._initialize_memory()
 
-    def _validate_data_length(self, data, length=255):
+    def _initialize_memory(self):
         """
-        Validate the length of the data to be sent.
-
-        :param data: The data to be validated.
-        :param length: The maximum allowable length of the data.
-        :raises ValueError: If the data length is not within the valid range.
+        Pre-programmed data as per NTAG213 specifications.
+        Block 3: Capability Container
+        Block 4: NDEF Magic Number
+        Block 5: Pre-programmed data
         """
-        if not data or not 1 < len(data) <= length:
-            raise ValueError(f'Data must be an array of 1 to {length} bytes.')
+        self.memory[3] = [0xE1, 0x10, 0x12, 0x00]
+        self.memory[4] = [0x01, 0x03, 0xA0, 0x0C]
+        self.memory[5] = [0x34, 0x03, 0x00, 0xFE]
 
     def write_block(self, block_number, data):
         """
         Write a block of data to the card.
         """
-        self._validate_data_length(data, 4)
+        if not (0 <= block_number < 45):
+            raise ValueError("Block number out of range")
+        if not data or not 1 < len(data) <= 4:
+            raise ValueError('Data must be an array of 1 to 4 bytes.')
 
         params = bytearray(3 + len(data))
         params[0] = 0x01
         params[1] = _NTAG_CMD_WRITE
         params[2] = block_number & 0xFF
         params[3:] = data
-
-        response = self.pn532._call_function(params=params,
-                                             response_length=1)
+        response = self.pn532._call_function(params=params, response_length=1)
         if response[0]:
             print('Error writing block {}: {}'.format(block_number, response[0]))
         return response[0] == 0x00
@@ -87,7 +97,11 @@ class NTAG213:
         """
         Read a block of data from the card.
         """
-        response = self.pn532._call_function(params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
+        if not (0 <= block_number < 45):
+            raise ValueError("Block number out of range")
+
+        params = [0x01, _NTAG_CMD_READ, block_number & 0xFF] 
+        response = self.pn532._call_function(params=params,
                                              response_length=17)
         if response is None:
             print(f'Communication error while reading block {block_number}.')
@@ -170,7 +184,7 @@ class NTAG213:
             for i in range(0, len(ndef_message), 4):
                 block_data = ndef_message[i:i + 4]
                 if len(block_data) < 4:
-                    block_data += b'\x00' * (4 - len(block_data))  # Padding
+                    block_data += b'\x00' * (4 - len(block_data))
 
                 if self.debug:
                     print(f"Writing data to block {start_block + i // 4}: {block_data}")
