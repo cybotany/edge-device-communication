@@ -40,7 +40,7 @@ if __name__ == '__main__':
                         record1 = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=ndef_url, record_position='only')
                         ndef_message = ntag213.combine_ndef_records([record1])                   
                         ntag213.write_ndef_message(ndef_message)
-                        ntag_data = pn532.ntag2xx_dump(start_block=0, end_block=20)
+                        ntag_data = ntag213.dump(start_block=0, end_block=20)
                     except nfc.PN532Error as e:
                         print(e.errmsg)               
                 else:

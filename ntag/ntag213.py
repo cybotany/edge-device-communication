@@ -1,3 +1,15 @@
+# NTAG Commands
+_NTAG_CMD_GET_VERSION = 0x60
+_NTAG_CMD_READ = 0x30
+_NTAG_CMD_FAST_READ = 0x3A
+_NTAG_CMD_WRITE = 0xA2
+_NTAG_CMD_COMPATIBILITY_WRITE = 0xA0
+_NTAG_CMD_READ_CNT = 0x39
+_NTAG_ADDR_READ_CNT = 0x02
+_NTAG_CMD_PWD_AUTH = 0x1B
+_NTAG_CMD_READ_SIG = 0x3C
+_NTAG_ADDR_READ_SIG = 0x00
+
 # NDEF Record Types
 _NDEF_URIPREFIX_NONE = 0x00
 _NDEF_URIPREFIX_HTTP_WWWDOT = 0x01
@@ -41,6 +53,71 @@ class NTAG213:
     def __init__(self, pn532, debug=False):
         self.pn532 = pn532
         self.debug = debug
+
+    def _validate_data_length(self, data, length=255):
+        """
+        Validate the length of the data to be sent.
+
+        :param data: The data to be validated.
+        :param length: The maximum allowable length of the data.
+        :raises ValueError: If the data length is not within the valid range.
+        """
+        if not data or not 1 < len(data) <= length:
+            raise ValueError(f'Data must be an array of 1 to {length} bytes.')
+
+    def write_block(self, block_number, data):
+        """
+        Write a block of data to the card.
+        """
+        self._validate_data_length(data, 4)
+
+        params = bytearray(3 + len(data))
+        params[0] = 0x01
+        params[1] = _NTAG_CMD_WRITE
+        params[2] = block_number & 0xFF
+        params[3:] = data
+
+        response = self.pn532._call_function(params=params,
+                                             response_length=1)
+        if response[0]:
+            print('Error writing block {}: {}'.format(block_number, response[0]))
+        return response[0] == 0x00
+
+    def read_block(self, block_number):
+        """
+        Read a block of data from the card.
+        """
+        response = self.pn532._call_function(params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
+                                             response_length=17)
+        if response[0]:
+            print('Error reading block {}: {}'.format(block_number, response[0]))
+        return response[1:][:4]
+
+    def dump(self, start_block=0, end_block=44):
+        """
+        Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
+        Defaults to reading all 45 blocks if no range is specified.
+
+        :param start_block: The starting block number (inclusive).
+        :param end_block: The ending block number (inclusive).
+        """
+        print(f"Reading NTAG213 NFC tag from block {start_block} to block {end_block}...")
+
+        all_data = []
+        for block_number in range(start_block, end_block + 1):
+            try:
+                block_data = self.read_block(block_number)
+
+                # Format each byte in block_data as two-character hexadecimal string
+                formatted_block_data = ' '.join(['%02X' % x for x in block_data])
+                all_data.append(formatted_block_data)
+
+                if self.debug:
+                    print(f"Block {block_number}: {formatted_block_data}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                break
+        return all_data
 
     def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
         """
@@ -152,7 +229,7 @@ class NTAG213:
                 if self.debug:
                     print(f"Writing data to block {start_block + i // 4}: {block_data}")
 
-                self.ntag2xx_write_block(start_block + i // 4, block_data)
+                self.write_block(start_block + i // 4, block_data)
 
             if self.debug:
                 print("Successfully wrote NDEF message to the NFC tag.")

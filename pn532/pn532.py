@@ -82,18 +82,6 @@ _PN532_CMD_TGGETINITIATORCOMMAND = 0x88
 _PN532_CMD_TGRESPONSETOINITIATOR = 0x90
 _PN532_CMD_TGGETTARGETSTATUS = 0x8A
 
-# NTAG Commands
-_NTAG_CMD_GET_VERSION = 0x60
-_NTAG_CMD_READ = 0x30
-_NTAG_CMD_FAST_READ = 0x3A
-_NTAG_CMD_WRITE = 0xA2
-_NTAG_CMD_COMPATIBILITY_WRITE = 0xA0
-_NTAG_CMD_READ_CNT = 0x39
-_NTAG_ADDR_READ_CNT = 0x02
-_NTAG_CMD_PWD_AUTH = 0x1B
-_NTAG_CMD_READ_SIG = 0x3C
-_NTAG_ADDR_READ_SIG = 0x00
-
 PN532_ERRORS = {
     0x01: 'PN532 ERROR TIMEOUT',
     0x02: 'PN532 ERROR CRC',
@@ -160,7 +148,7 @@ class PN532:
         """
         raise NotImplementedError
 
-    def _call_function(self, command, response_length=0, params=None, timeout=1):
+    def _call_function(self, command=_PN532_CMD_INDATAEXCHANGE, response_length=0, params=None, timeout=1):
         """
         Send specified command to the PN532
         """
@@ -239,17 +227,6 @@ class PN532:
         Send special command to wake up
         """
         raise NotImplementedError
-
-    def _validate_data_length(self, data, length=255):
-        """
-        Validate the length of the data to be sent.
-
-        :param data: The data to be validated.
-        :param length: The maximum allowable length of the data.
-        :raises ValueError: If the data length is not within the valid range.
-        """
-        if not data or not 1 < len(data) <= length:
-            raise ValueError(f'Data must be an array of 1 to {length} bytes.')
 
     def _build_frame(self, packet_data):
         """
@@ -338,7 +315,6 @@ class PN532:
         """
         self._call_function(_PN532_CMD_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
 
-
     def list_passive_target(self, card_baud=_ISO14443A, timeout=1):
         """
         Wait for an NTAG to be available and return its UID when found.
@@ -347,9 +323,9 @@ class PN532:
         """
         try:
             response = self._call_function(_PN532_CMD_INLISTPASSIVETARGET,
-                                            params=[0x01, card_baud],
-                                            response_length=19,
-                                            timeout=timeout)
+                                           params=[0x01, card_baud],
+                                           response_length=19,
+                                           timeout=timeout)
         except BusyError:
             return None
         # If no response is available return None to indicate no card is present.
@@ -362,62 +338,3 @@ class PN532:
             raise RuntimeError('Found card with unexpectedly long UID!')
         # Return UID of card.
         return response[6:6 + response[5]]
-
-    def ntag2xx_write_block(self, block_number, data):
-        """
-        Write a block of data to the card.
-        """
-        self._validate_data_length(data, 4)
-
-        params = bytearray(3 + len(data))
-        params[0] = 0x01
-        params[1] = _NTAG_CMD_WRITE
-        params[2] = block_number & 0xFF
-        params[3:] = data
-
-        response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                       params=params,
-                                       response_length=1)
-        if response[0]:
-            raise PN532Error(response[0])
-        return response[0] == 0x00
-
-    def ntag2xx_read_block(self, block_number):
-        """
-        Read a block of data from the card.
-        """
-        response = self._call_function(_PN532_CMD_INDATAEXCHANGE,
-                                       params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
-                                       response_length=17)
-        if response[0]:
-            raise PN532Error(response[0])
-        return response[1:][:4]
-
-    def ntag2xx_dump(self, start_block=0, end_block=44):
-        """
-        Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
-        Defaults to reading all 45 blocks if no range is specified.
-
-        :param start_block: The starting block number (inclusive).
-        :param end_block: The ending block number (inclusive).
-        """
-        print(f"Reading NTAG2xx NFC tag from block {start_block} to block {end_block}...")
-
-        all_data = []
-        for block_number in range(start_block, end_block + 1):
-            try:
-                block_data = self.ntag2xx_read_block(block_number)
-
-                # Format each byte in block_data as two-character hexadecimal string
-                formatted_block_data = ' '.join(['%02X' % x for x in block_data])
-                all_data.append(formatted_block_data)
-
-                if self.debug:
-                    print(f"Block {block_number}: {formatted_block_data}")
-            except PN532Error as e:
-                print(f"Error reading block {block_number}: {e}")
-                break
-            except Exception as e:
-                print(f"Unexpected error: {e}")
-                break
-        return all_data
