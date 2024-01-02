@@ -211,7 +211,7 @@ class NTAG213:
 
         return ndef_message
     
-    def write_ndef_message(self, ndef_message, start_block=4):
+    def write_ndef_message(self, ndef_message, start_block=5):
         """
         Write an NDEF message to an NTAG2XX NFC tag.
 

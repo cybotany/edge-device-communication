@@ -36,9 +36,8 @@ if __name__ == '__main__':
                     #    print('Error communicating with Django app:', e)  
                     try:
                         ndef_url = f'10.0.0.218:8080/link/{uid_str}/'
-                        record1 = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=ndef_url, record_position='only')
-                        ndef_message = ntag213.combine_ndef_records([record1])                   
-                        ntag213.write_ndef_message(ndef_message)
+                        record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=ndef_url, record_position='only')               
+                        ntag213.write_ndef_message(record)
                         ntag_data = ntag213.dump(start_block=0, end_block=20)
                     except Exception as e:
                         print(e)               
