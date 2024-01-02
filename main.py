@@ -8,7 +8,7 @@ if __name__ == '__main__':
         pn532 = PN532_SPI(debug=True, reset=20, cs=4)
         pn532.SAM_configuration()
 
-        ntag213 = NTAG213(pn532)
+        ntag213 = NTAG213(pn532, debug=True)
         print('Waiting for an NFC card...')
         uid_list = []
         last_uid = None
