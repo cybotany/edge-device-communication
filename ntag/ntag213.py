@@ -38,8 +38,9 @@ _NDEF_URIPREFIX_URN_NFC = 0x23
 
 
 class NTAG213:
-    def __init__(self, pn532):
+    def __init__(self, pn532, debug=False):
         self.pn532 = pn532
+        self.debug = debug
 
     def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
         """
