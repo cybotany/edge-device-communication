@@ -51,6 +51,14 @@ _NDEF_URIPREFIX_URN_NFC = 0x23
 _CONFIG_PAGE_START = 0x29
 _CONFIG_PAGE_END = 0x2C
 
+_MIRROR_CONF_BIT_POS = 6
+_MIRROR_BYTE_BIT_POS = 4
+_STRG_MOD_EN_BIT_POS = 0
+
+_MIRROR_CONF_DEFAULT = 0b00
+_MIRROR_BYTE_DEFAULT = 0b00
+_STRG_MOD_EN_DEFAULT = 0b1
+
 _MIRROR_CONF_BIT = 7
 _MIRROR_BYTE_BIT = 6
 
@@ -132,13 +140,15 @@ class NTAG213:
 
         return all_data
 
-    def _create_message_flags(self, record_position, payload, id, tnf):
-        MB = 0x80 if record_position == 'only' or record_position == 'first' else 0x00
-        ME = 0x40 if record_position == 'only' or record_position == 'last' else 0x00
-        CF = 0x20 if record_position == 'middle' else 0x00
-        SR = 0x10 if len(payload) < 256 else 0x00
-        IL = 0x08 if id else 0x00
+    def _create_message_flags(self, payload, id, tnf):
+        # Assuming 'only' position if there's a single record
+        MB = 0x80  # Message Begin
+        ME = 0x40  # Message End
+        CF = 0x00  # Chunk Flag, not used for a single record
+        SR = 0x10 if len(payload) < 256 else 0x00  # Short Record
+        IL = 0x08 if id else 0x00  # ID Length
         return MB | ME | CF | SR | IL | tnf
+
 
     def _prepare_payload(self, record_type, payload):
         if record_type == 'U':
@@ -163,11 +173,11 @@ class NTAG213:
         return tlv
 
 
-    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
+    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', id=''):
         """
         Method to create the NDEF record with debug statements.
         """
-        message_flags = self._create_message_flags(record_position, payload, id, tnf)
+        message_flags = self._create_message_flags(payload, id, tnf)
         prepared_payload = self._prepare_payload(record_type, payload)
         header = self._create_record_header(message_flags, record_type, prepared_payload, id)
         return self._construct_complete_record(header, prepared_payload)
