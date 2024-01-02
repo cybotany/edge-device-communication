@@ -194,23 +194,6 @@ class NTAG213:
 
         return tlv
     
-    def combine_ndef_records(self, records):
-        """
-        Combine multiple NDEF records into a single NDEF message.
-
-        :param records: List of NDEF records
-        :return: Combined NDEF message as a byte array
-        """
-        ndef_message = bytearray()
-        for record in records:
-            ndef_message.extend(record)
-
-        if self.debug:
-            print(f"Combining {len(records)} NDEF Records into a single message.")
-            print(f"Combined NDEF Message: {ndef_message}")
-
-        return ndef_message
-    
     def write_ndef_message(self, ndef_message, start_block=5):
         """
         Write an NDEF message to an NTAG2XX NFC tag.
