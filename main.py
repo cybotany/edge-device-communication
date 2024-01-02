@@ -1,6 +1,5 @@
 import requests
 import RPi.GPIO as GPIO
-import pn532.pn532 as nfc
 from pn532 import PN532_SPI
 from ntag import NTAG213
 
@@ -41,8 +40,8 @@ if __name__ == '__main__':
                         ndef_message = ntag213.combine_ndef_records([record1])                   
                         ntag213.write_ndef_message(ndef_message)
                         ntag_data = ntag213.dump(start_block=0, end_block=20)
-                    except nfc.PN532Error as e:
-                        print(e.errmsg)               
+                    except Exception as e:
+                        print(e)               
                 else:
                     print('Found duplicate card. Extracted UID:', uid_str)
     except Exception as e:
