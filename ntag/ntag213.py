@@ -89,34 +89,33 @@ class NTAG213:
         """
         response = self.pn532._call_function(params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
                                              response_length=17)
-        if response[0]:
-            print('Error reading block {}: {}'.format(block_number, response[0]))
+        if response is None:
+            print(f'Communication error while reading block {block_number}.')
+            return None
+        elif response[0] != 0x00:
+            print(f'Error reading block {block_number}: {response[0]}')
+            return None
         return response[1:][:4]
 
     def dump(self, start_block=0, end_block=44):
         """
         Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
-        Defaults to reading all 45 blocks if no range is specified.
-
-        :param start_block: The starting block number (inclusive).
-        :param end_block: The ending block number (inclusive).
         """
         print(f"Reading NTAG213 NFC tag from block {start_block} to block {end_block}...")
 
         all_data = []
         for block_number in range(start_block, end_block + 1):
-            try:
-                block_data = self.read_block(block_number)
-
-                # Format each byte in block_data as two-character hexadecimal string
-                formatted_block_data = ' '.join(['%02X' % x for x in block_data])
-                all_data.append(formatted_block_data)
-
-                if self.debug:
-                    print(f"Block {block_number}: {formatted_block_data}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
+            block_data = self.read_block(block_number)
+            if block_data is None:
+                print(f"Error or no response while reading block {block_number}.")
                 break
+
+            formatted_block_data = ' '.join(['%02X' % x for x in block_data])
+            all_data.append(formatted_block_data)
+
+            if self.debug:
+                print(f"Block {block_number}: {formatted_block_data}")
+
         return all_data
 
     def create_ndef_record(self, tnf=0x01, record_type='T', payload='', record_position='only', id=''):
