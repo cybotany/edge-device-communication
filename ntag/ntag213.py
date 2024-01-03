@@ -53,15 +53,14 @@ _CONFIG_PAGE_END = 0x2C
 
 _MIRROR_CONF_BIT_POS = 6
 _MIRROR_BYTE_BIT_POS = 4
+_MIRROR_PAGE_BYTE_POS = 2
 _STRG_MOD_EN_BIT_POS = 0
 
 _MIRROR_CONF_DEFAULT = 0b00
 _MIRROR_BYTE_DEFAULT = 0b00
 _STRG_MOD_EN_DEFAULT = 0b1
 
-_MIRROR_CONF_BIT = 7
-_MIRROR_BYTE_BIT = 6
-
+MIRROR_CONF_VALUE = 0b11 
 
 class NTAG213:
     def __init__(self, pn532, debug=False):
@@ -139,6 +138,52 @@ class NTAG213:
                 print(f"Block {block_number}: {formatted_block_data}")
 
         return all_data
+
+    def read_config_page(self, page):
+        if not (_CONFIG_PAGE_START <= page <= _CONFIG_PAGE_END):
+            raise ValueError("Page number out of configuration range")
+        return self.read_block(page)
+
+    def write_config_page(self, page, data):
+        if not (_CONFIG_PAGE_START <= page <= _CONFIG_PAGE_END):
+            raise ValueError("Page number out of configuration range")
+        self.write_block(page, data)
+
+    def get_mirror_configuration(self):
+        config_page = self.read_config_page(41)  # Page 41 (0x29) for NTAG213
+        mirror_conf = (config_page[0] >> _MIRROR_CONF_BIT_POS) & 0b11
+        mirror_byte = (config_page[0] >> _MIRROR_BYTE_BIT_POS) & 0b11
+        mirror_page = config_page[2]  # The byte itself is the MIRROR_PAGE value
+        return mirror_conf, mirror_byte, mirror_page
+
+    def set_mirror_configuration(self, mirror_conf, mirror_byte, mirror_page):
+        config_page = self.read_config_page(41)  # Page 41 (0x29) for NTAG213
+        # Set MIRROR_CONF and MIRROR_BYTE
+        config_page[0] &= ~((0b11 << _MIRROR_CONF_BIT_POS) | (0b11 << _MIRROR_BYTE_BIT_POS))
+        config_page[0] |= ((mirror_conf << _MIRROR_CONF_BIT_POS) | (mirror_byte << _MIRROR_BYTE_BIT_POS))
+        # Set MIRROR_PAGE
+        config_page[2] = mirror_page
+        self.write_config_page(41, config_page)
+
+    def update_memory_with_mirror(self):
+        mirror_conf, mirror_byte, mirror_page = self.get_mirror_configuration()
+        if mirror_conf in [0b01, 0b10, 0b11]:  # Check if UID/NFC counter mirroring is enabled
+            # Convert UID and NFC counter to ASCII hex representation
+            uid_ascii = ''.join(f'{byte:02X}' for byte in self.uid)
+            nfc_counter_ascii = f'{self.nfc_counter:06X}'
+
+            # Construct the mirrored string
+            mirrored_string = uid_ascii + 'x' + nfc_counter_ascii if mirror_conf == 0b11 else \
+                              uid_ascii if mirror_conf == 0b01 else \
+                              nfc_counter_ascii
+
+            # Write the mirrored string to memory starting from MIRROR_PAGE
+            byte_index = mirror_byte
+            for char in mirrored_string:
+                page = mirror_page + byte_index // 4
+                byte_pos = byte_index % 4
+                self.memory[page][byte_pos] = ord(char)  # Convert char to ASCII value
+                byte_index += 1
 
     def _create_message_flags(self, payload, id, tnf):
         # Assuming 'only' position if there's a single record
