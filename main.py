@@ -30,7 +30,7 @@ if __name__ == '__main__':
                     # Send UID to Django API
                     api_url = f'https://10.0.0.218:8080/api/create/link/{uid_str}/'
                     try:
-                        response = requests.post(api_url, data={'uid': uid_str}, auth=(username, password))
+                        response = requests.post(api_url, data={'uid': uid_str}, verify=False)
                         if response.status_code == 201:
                             print('Link created successfully in Django app.')
                             digit_url = response.json().get('digit_url')
