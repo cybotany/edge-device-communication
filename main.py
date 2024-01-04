@@ -35,8 +35,11 @@ if __name__ == '__main__':
                             print('Link created successfully in Django app.')
                             digit_url = response.json().get('digit_url')
 
-                            # Use the digit_url as the payload for the NDEF record
-                            record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=digit_url)               
+                            # Strip 'https://' from the URL
+                            stripped_url = digit_url.replace('https://', '')
+
+                            # Use the stripped_url as the payload for the NDEF record
+                            record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
                             ntag213.write_ndef_message(record)
                             ntag_data = ntag213.dump(start_block=0, end_block=20)
 
