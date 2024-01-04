@@ -1,7 +1,11 @@
+import os
 import requests
 import RPi.GPIO as GPIO
 from pn532 import PN532_SPI
 from ntag import NTAG213
+
+username = os.getenv('USERNAME')
+password = os.getenv('PASSWORD')
 
 if __name__ == '__main__':
     try:
@@ -24,22 +28,22 @@ if __name__ == '__main__':
                     uid_list.append(uid_str)
                     print('Found new card. Extracted UID:', uid_str)
                     # Send UID to Django API
-                    #api_url = f'http://10.0.0.218:8080/api/create/link/{uid_str}/'
-                    #try:
-                    #    response = requests.post(api_url, data={'uid': uid_str})
-                    #    if response.status_code == 201:
-                    #        print('Link created successfully in Django app.')
-                    #    else:
-                    #        print('Failed to create link in Django app:', response.text)
-                    #except requests.exceptions.RequestException as e:
-                    #    print('Error communicating with Django app:', e)  
+                    api_url = f'https://10.0.0.218:8080/api/create/link/{uid_str}/'
                     try:
-                        ndef_url = f'10.0.0.218:8080/link/{uid_str}'
-                        record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=ndef_url)               
-                        ntag213.write_ndef_message(record)
-                        ntag_data = ntag213.dump(start_block=0, end_block=20)
-                    except Exception as e:
-                        print(e)               
+                        response = requests.post(api_url, data={'uid': uid_str}, auth=(username, password))
+                        if response.status_code == 201:
+                            print('Link created successfully in Django app.')
+                            digit_url = response.json().get('digit_url')
+
+                            # Use the digit_url as the payload for the NDEF record
+                            record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=digit_url)               
+                            ntag213.write_ndef_message(record)
+                            ntag_data = ntag213.dump(start_block=0, end_block=20)
+
+                        else:
+                            print('Failed to create link in Django app:', response.text)
+                    except requests.exceptions.RequestException as e:
+                        print('Error communicating with Django app:', e)  
                 else:
                     print('Found duplicate card. Extracted UID:', uid_str)
     except Exception as e:
