@@ -33,10 +33,10 @@ if __name__ == '__main__':
                         response = requests.post(api_url, data={'uid': uid_str}, verify=False)
                         if response.status_code == 201:
                             print('Link created successfully in Django app.')
-                            digit_url = response.json().get('digit_url')
+                            link_url = response.json().get('link_url')
 
                             # Strip 'https://' from the URL
-                            stripped_url = digit_url.replace('https://', '')
+                            stripped_url = link_url.replace('https://', '')
 
                             # Use the stripped_url as the payload for the NDEF record
                             record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
