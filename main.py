@@ -30,12 +30,12 @@ if __name__ == '__main__':
         last_uid = None
 
         while True:
-            uid = pn532.list_passive_target(timeout=0.5)
-            if uid is None:
+            serial_number = pn532.list_passive_target(timeout=0.5)
+            if serial_number is None:
                 continue
-            if uid != last_uid:
-                last_uid = uid
-                uid_str = ':'.join(['{:02X}'.format(i) for i in uid])
+            if serial_number != last_uid:
+                last_uid = serial_number
+                uid_str = ':'.join(['{:02X}'.format(i) for i in serial_number])
                 if uid_str not in uid_list:
                     uid_list.append(uid_str)
                     print('Found new card. Extracted UID:', uid_str)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
                     if token:
                         headers = {'Authorization': f'Bearer {token}'}
                         try:
-                            response = requests.post(api_url, headers=headers, data={'uid': uid_str}, verify=False)
+                            response = requests.post(api_url, headers=headers, data={'serial_number': uid_str}, verify=False)
                             if response.status_code == 201:
                                 print('Link created successfully in Django app.')
                                 link_url = response.json().get('link_url')
