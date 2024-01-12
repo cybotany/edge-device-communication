@@ -197,7 +197,8 @@ class NTAG213:
 
     def _prepare_payload(self, record_type, payload):
         if record_type == 'U':
-            uri_identifier_code = b'\x04'  # Assuming 0x04 for 'https://'
+            # Choose the URI identifier code based on the debug flag
+            uri_identifier_code = b'\x03' if self.debug else b'\x04'
             return uri_identifier_code + payload.encode()
         return payload.encode()
 

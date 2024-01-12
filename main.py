@@ -7,6 +7,7 @@ from ntag import NTAG213
 username = os.getenv('USERNAME')
 password = os.getenv('PASSWORD')
 
+
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=True, reset=20, cs=4)
@@ -27,16 +28,22 @@ if __name__ == '__main__':
                 if uid_str not in uid_list:
                     uid_list.append(uid_str)
                     print('Found new card. Extracted UID:', uid_str)
-                    # Send UID to Django API
-                    api_url = f'https://10.0.0.218:8080/api/create/link/{uid_str}/'
+
+                    if ntag213.debug:
+                        api_url = f'http://10.0.0.218:8080/api/create/link/{uid_str}/'
+                    else:
+                        api_url = f'https://digidex.app/api/create/link/{uid_str}/'
+
                     try:
                         response = requests.post(api_url, data={'uid': uid_str}, verify=False)
                         if response.status_code == 201:
                             print('Link created successfully in Django app.')
                             link_url = response.json().get('link_url')
 
-                            # Strip 'https://' from the URL
-                            stripped_url = link_url.replace('https://', '')
+                            if ntag213.debug:
+                                stripped_url = link_url.replace('http://', '')
+                            else:
+                                stripped_url = link_url.replace('https://', '')
 
                             # Use the stripped_url as the payload for the NDEF record
                             record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
