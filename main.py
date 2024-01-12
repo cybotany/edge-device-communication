@@ -15,6 +15,18 @@ if __name__ == '__main__':
 
         ntag213 = NTAG213(pn532, debug=True)
         print('Waiting for an NFC card...')
+
+        # JWT token authentication endpoint
+        auth_url = 'https://digidex.app/api/token/' if not ntag213.debug else 'http://10.0.0.218:8080/api/token/'
+
+        auth_response = requests.post(auth_url, data={'username': username, 'password': password})
+        if auth_response.status_code == 200:
+            token = auth_response.json().get('access')
+            print("Authentication successful, JWT access token obtained.")
+        else:
+            print("Failed to authenticate:", auth_response.text)
+            token = None
+
         uid_list = []
         last_uid = None
 
