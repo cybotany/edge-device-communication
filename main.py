@@ -7,7 +7,6 @@ from ntag import NTAG213
 username = os.getenv('USERNAME')
 password = os.getenv('PASSWORD')
 
-
 if __name__ == '__main__':
     try:
         pn532 = PN532_SPI(debug=True, reset=20, cs=4)
@@ -46,26 +45,29 @@ if __name__ == '__main__':
                     else:
                         api_url = f'https://digidex.app/api/create/link/{uid_str}/'
 
-                    try:
-                        response = requests.post(api_url, data={'uid': uid_str}, verify=False)
-                        if response.status_code == 201:
-                            print('Link created successfully in Django app.')
-                            link_url = response.json().get('link_url')
+                    if token:
+                        headers = {'Authorization': f'Bearer {token}'}
+                        try:
+                            response = requests.post(api_url, headers=headers, data={'uid': uid_str}, verify=False)
+                            if response.status_code == 201:
+                                print('Link created successfully in Django app.')
+                                link_url = response.json().get('link_url')
 
-                            if ntag213.debug:
-                                stripped_url = link_url.replace('http://', '')
+                                if ntag213.debug:
+                                    stripped_url = link_url.replace('http://', '')
+                                else:
+                                    stripped_url = link_url.replace('https://', '')
+
+                                # Use the stripped_url as the payload for the NDEF record
+                                record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
+                                ntag213.write_ndef_message(record)
+                                ntag_data = ntag213.dump(start_block=0, end_block=20)
                             else:
-                                stripped_url = link_url.replace('https://', '')
-
-                            # Use the stripped_url as the payload for the NDEF record
-                            record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
-                            ntag213.write_ndef_message(record)
-                            ntag_data = ntag213.dump(start_block=0, end_block=20)
-
-                        else:
-                            print('Failed to create link in Django app:', response.text)
-                    except requests.exceptions.RequestException as e:
-                        print('Error communicating with Django app:', e)  
+                                print('Failed to create link in Django app:', response.text)
+                        except requests.exceptions.RequestException as e:
+                            print('Error communicating with Django app:', e)
+                    else:
+                        print("No authentication token available.")
                 else:
                     print('Found duplicate card. Extracted UID:', uid_str)
     except Exception as e:
