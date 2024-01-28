@@ -51,12 +51,12 @@ if __name__ == '__main__':
                             response = requests.post(api_url, headers=headers, data={'serial_number': uid_str}, verify=False)
                             if response.status_code == 201:
                                 print('Link created successfully in Django app.')
-                                link_url = response.json().get('link_url')
+                                nfc_url = response.json().get('nfc_url')
 
                                 if ntag213.debug:
-                                    stripped_url = link_url.replace('http://', '')
+                                    stripped_url = nfc_url.replace('http://', '')
                                 else:
-                                    stripped_url = link_url.replace('https://', '')
+                                    stripped_url = nfc_url.replace('https://', '')
 
                                 # Use the stripped_url as the payload for the NDEF record
                                 record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
