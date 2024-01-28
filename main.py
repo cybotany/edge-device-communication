@@ -13,8 +13,7 @@ if __name__ == '__main__':
         pn532.SAM_configuration()
 
         ntag213 = NTAG213(pn532, debug=True)
-        print('Waiting for an NFC card...')
-
+    
         # JWT token authentication endpoint
         auth_url = 'https://digidex.app/api/token/' if not ntag213.debug else 'http://10.0.0.218:8080/api/token/'
 
@@ -25,10 +24,10 @@ if __name__ == '__main__':
         else:
             print("Failed to authenticate:", auth_response.text)
             token = None
-
+        
         uid_list = []
         last_uid = None
-
+        print('Waiting for an NFC card...')
         while True:
             serial_number = pn532.list_passive_target(timeout=0.5)
             if serial_number is None:
