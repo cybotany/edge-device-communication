@@ -60,7 +60,6 @@ if __name__ == '__main__':
                                 # Use the stripped_url as the payload for the NDEF record
                                 record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)               
                                 ntag213.write_ndef_message(record)
-                                ntag_data = ntag213.dump(start_block=0, end_block=25)
                             else:
                                 print('Failed to create link in Django app:', response.text)
                         except requests.exceptions.RequestException as e:
