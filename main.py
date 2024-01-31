@@ -34,7 +34,7 @@ if __name__ == '__main__':
                 continue
             if serial_number != last_uid:
                 last_uid = serial_number
-                uid_str = ':'.join(['{:02X}'.format(i) for i in serial_number])
+                uid_str = '-'.join(['{:02X}'.format(i) for i in serial_number])
                 if uid_str not in uid_list:
                     uid_list.append(uid_str)
                     print('Found new card. Extracted UID:', uid_str)
