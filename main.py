@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 
 def setup_logging():
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    log_file = os.getenv('LOG_FILE_PATH', '/path/to/your/logfile.log')
+    log_file = os.getenv('LOG_FILE_PATH', '/home/raphael/logfile.log')
 
     # Rotate log after reaching 10MB, keep 3 backup log files
     file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=3)
