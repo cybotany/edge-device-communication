@@ -25,7 +25,7 @@ def main():
     username = os.getenv('USERNAME')
     password = os.getenv('PASSWORD')
     auth_url = os.getenv('AUTH_URL', 'https://digidex.app/api/token/')
-    api_url_base = os.getenv('API_URL_BASE', 'https://digidex.app/api/create-link/')
+    api_url_base = os.getenv('API_URL_BASE', 'https://digidex.app/api/create-link/') 
 
     pn532 = PN532_SPI(debug=False, reset=20, cs=4)
     pn532.SAM_configuration()
@@ -47,16 +47,14 @@ def main():
                     logging.info(f'Found new card. Extracted UID: {uid_str}')
 
                     api_url = f'{api_url_base}{uid_str}/'
-                    if token:
-                        nfc_url = create_link(api_url, token, uid_str)
-                        if nfc_url:
-                            stripped_url = process_nfc_url(ntag213, nfc_url)
-                            record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)
-                            ntag213.write_ndef_message(record)
-                        else:
-                            logging.error("Failed to process NFC URL.")
+                    nfc_url = create_link(api_url, token, uid_str)
+                    
+                    if nfc_url:
+                        stripped_url = process_nfc_url(ntag213, nfc_url)
+                        record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)
+                        ntag213.write_ndef_message(record)
                     else:
-                        logging.error("No authentication token available.")
+                        logging.error("Failed to process NFC URL.")
                 else:
                     logging.info(f'Found duplicate card. Extracted UID: {uid_str}')
     except Exception as e:

@@ -1,5 +1,6 @@
 import requests
 import logging
+import sys
 
 def authenticate_user(auth_url, username, password):
     try:
@@ -9,7 +10,7 @@ def authenticate_user(auth_url, username, password):
             return response.json().get('access')
         else:
             logging.error(f"Failed to authenticate: {response.text}")
-            return None
+            sys.exit("Authentication failed, exiting program.")
     except requests.exceptions.RequestException as e:
         logging.error(f"Error during authentication: {e}")
-        return None
+        sys.exit(f"Error during authentication request, exiting program.")
