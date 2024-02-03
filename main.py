@@ -34,7 +34,9 @@ def main():
     token = authenticate_user(auth_url, username, password)
     uid_list = []
     last_uid = None
-    logging.info('Waiting for an NFC card...')
+    message1 = 'Waiting for an NFC card...'
+    logging.info(message1)
+    print(message1)
 
     try:
         while True:
@@ -44,7 +46,9 @@ def main():
                 uid_str = ':'.join(['{:02X}'.format(i) for i in serial_number])
                 if uid_str not in uid_list:
                     uid_list.append(uid_str)
-                    logging.info(f'Found new card. Extracted UID: {uid_str}')
+                    message2 = f'Found new card. Extracted UID: {uid_str}'
+                    logging.info(message2)
+                    print(message2)
 
                     api_url = f'{api_url_base}{uid_str}/'
                     nfc_url = create_link(api_url, token, uid_str)
@@ -54,11 +58,16 @@ def main():
                         record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)
                         ntag213.write_ndef_message(record)
                     else:
-                        logging.error("Failed to process NFC URL.")
+                        message3 = "Failed to process NFC URL."
+                        logging.info(message3)
+                        print(message3)
                 else:
-                    logging.info(f'Found duplicate card. Extracted UID: {uid_str}')
+                    message4 = f'Found duplicate card. Extracted UID: {uid_str}'
+                    logging.info(message4)
+                    print(message4)
     except Exception as e:
         logging.error(e)
+        print(e)
     finally:
         GPIO.cleanup()
 
