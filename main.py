@@ -47,7 +47,7 @@ if __name__ == '__main__':
                     if token:
                         headers = {'Authorization': f'Bearer {token}'}
                         try:
-                            response = requests.post(api_url, headers=headers, data={'serial_number': uid_str}, verify=False)
+                            response = requests.post(api_url, headers=headers, data={'serial_number': uid_str}, verify=True)
                             if response.status_code == 201:
                                 print('Link created successfully in Django app.')
                                 nfc_url = response.json().get('nfc_url')
