@@ -34,9 +34,9 @@ import time
 import RPi.GPIO as GPIO
 from .pn532 import PN532, BusyError
 
-I2C_ADDRESS                    = 0x24
-I2C_CHANNEL                    = 1
-I2C_SLAVE                      = 1795
+I2C_ADDRESS = 0x24
+I2C_CHANNEL = 1
+I2C_SLAVE = 1795
 
 
 class I2CDevice:

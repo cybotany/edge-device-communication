@@ -33,8 +33,8 @@ import serial
 import RPi.GPIO as GPIO
 from .pn532 import PN532, BusyError
 
-DEV_SERIAL          = '/dev/ttyS0'
-BAUD_RATE           = 115200
+DEV_SERIAL = '/dev/ttyS0'
+BAUD_RATE = 115200
 
 
 class PN532_UART(PN532):

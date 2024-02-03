@@ -33,10 +33,10 @@ import spidev
 import RPi.GPIO as GPIO
 from .pn532 import PN532
 
-_SPI_STATREAD                  = 0x02
-_SPI_DATAWRITE                 = 0x01
-_SPI_DATAREAD                  = 0x03
-_SPI_READY                     = 0x01
+_SPI_STATREAD = 0x02
+_SPI_DATAWRITE = 0x01
+_SPI_DATAREAD = 0x03
+_SPI_READY = 0x01
 
 
 class SPIDevice:
