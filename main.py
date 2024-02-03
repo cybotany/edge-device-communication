@@ -9,10 +9,10 @@ password = os.getenv('PASSWORD')
 
 if __name__ == '__main__':
     try:
-        pn532 = PN532_SPI(debug=True, reset=20, cs=4)
+        pn532 = PN532_SPI(debug=False, reset=20, cs=4)
         pn532.SAM_configuration()
 
-        ntag213 = NTAG213(pn532, debug=True)
+        ntag213 = NTAG213(pn532, debug=False)
     
         # JWT token authentication endpoint
         auth_url = 'https://digidex.app/api/token/' if not ntag213.debug else 'http://10.0.0.218:8080/api/token/'
