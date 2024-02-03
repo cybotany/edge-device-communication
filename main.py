@@ -1,6 +1,6 @@
 import os
 import RPi.GPIO as GPIO
-from .helpers import authenticate_user, create_link, process_nfc_url
+from helpers import authenticate_user, create_link, process_nfc_url
 from pn532 import PN532_SPI
 from ntag import NTAG213
 import logging
