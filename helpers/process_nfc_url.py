@@ -1,6 +1,3 @@
 def process_nfc_url(ntag213, nfc_url):
-    if ntag213.debug:
-        stripped_url = nfc_url.replace('http://', '')
-    else:
-        stripped_url = nfc_url.replace('https://', '')
-    return stripped_url
+    url_without_scheme = nfc_url.split('://')[1] if '://' in nfc_url else nfc_url
+    return url_without_scheme
