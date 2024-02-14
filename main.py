@@ -27,9 +27,9 @@ def main():
     auth_url = os.getenv('AUTH_URL', 'https://digidex.app/api/token/')
     api_url_base = os.getenv('API_URL_BASE', 'https://digidex.app/api/create-link/') 
 
-    pn532 = PN532_SPI(debug=True, reset=20, cs=4)
+    pn532 = PN532_SPI(debug=False, reset=20, cs=4)
     pn532.SAM_configuration()
-    ntag213 = NTAG213(pn532, debug=True)
+    ntag213 = NTAG213(pn532, debug=False)
 
     token = authenticate_user(auth_url, username, password)
     uid_list = []
