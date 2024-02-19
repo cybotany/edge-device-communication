@@ -8,7 +8,7 @@ from logging.handlers import RotatingFileHandler
 
 def setup_logging():
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
-    log_file = os.getenv('LOG_FILE_PATH', '/home/raphael/LinkMapper/logfile.log')
+    log_file = os.getenv('LOG_FILE_PATH')
 
     # Rotate log after reaching 10MB, keep 3 backup log files
     file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=3)
@@ -24,8 +24,8 @@ def main():
 
     username = os.getenv('USERNAME')
     password = os.getenv('PASSWORD')
-    auth_url = os.getenv('AUTH_URL', 'https://digidex.app/api/token/')
-    api_url_base = os.getenv('API_URL_BASE', 'https://digidex.app/api/create-link/') 
+    auth_url = os.getenv('AUTH_URL')
+    api_url_base = os.getenv('API_URL_BASE') 
 
     pn532 = PN532_SPI(debug=False, reset=20, cs=4)
     pn532.SAM_configuration()
