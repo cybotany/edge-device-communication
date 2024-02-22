@@ -25,11 +25,12 @@ def main():
     username = os.getenv('USERNAME')
     password = os.getenv('PASSWORD')
     auth_url = os.getenv('AUTH_URL')
-    api_url_base = os.getenv('API_URL_BASE') 
+    api_url_base = os.getenv('API_URL_BASE')
+    env_debug = os.getenv('ENV_DEBUG') 
 
-    pn532 = PN532_SPI(debug=False, reset=20, cs=4)
+    pn532 = PN532_SPI(debug=env_debug, reset=20, cs=4)
     pn532.SAM_configuration()
-    ntag213 = NTAG213(pn532, debug=False)
+    ntag213 = NTAG213(pn532, debug=env_debug)
 
     token = authenticate_user(auth_url, username, password)
     uid_list = []
