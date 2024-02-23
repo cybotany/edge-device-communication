@@ -3,7 +3,7 @@ import os
 import RPi.GPIO as GPIO
 from helpers import authenticate_user, create_link, process_nfc_url
 from pn532 import PN532_SPI as PN532
-from ntag import NTAG
+from nfc import NTAG
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -34,31 +34,29 @@ def main():
     pn532.SAM_configuration()
 
     token = authenticate_user(auth_url, username, password)
-    uid_list = []
+    ntags = []
     last_uid = None
-    logging.info('Waiting for an NFC card...')
+    logging.info('PN532 NFC reader initialized.')
 
     try:
         while True:
             uid = pn532.list_passive_target(timeout=0.5)
             if uid and uid != last_uid:
                 last_uid = uid
-                uid_str = ':'.join(['{:02X}'.format(i) for i in uid])
-                if uid_str not in uid_list:
-                    uid_list.append(uid_str)
-                    logging.info(f'Found new NTAG. Extracted UID: {uid_str}')
+                clean_uid = ':'.join(['{:02X}'.format(i) for i in uid])
+                if clean_uid not in ntags:
+                    ntags.append(clean_uid)
+                    logging.info(f'Found new NTAG: {clean_uid}')
 
                     # Create a new NTAG instance for the new UID
-                    ntag = NTAG(pn532)
-                    ntag.fill_memory()
+                    ntag = NTAG(pn532, clean_uid)
+                    ntags.append(ntag)
 
-                    # Extract the URL from the NTAG
-
-                    api_url = f'{api_url_base}{uid_str}/'
-                    create_link(api_url, token, uid_str)
+                    api_url = f'{api_url_base}{clean_uid}/'
+                    create_link(api_url, token, clean_uid)
 
                 else:
-                    logging.info(f'Found duplicate NTAG. Extracted UID: {uid_str}')
+                    logging.info(f'Found duplicate NTAG: {clean_uid}')
     except Exception as e:
         logging.error(e)
     finally:

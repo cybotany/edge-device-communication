@@ -1,6 +1,6 @@
-from .AbstractNTAG import AbstractNTAG
+from ..nfc.NFC import NFC
 
-class NTAG(AbstractNTAG):
+class NTAG(NFC):
     def __init__(self, pn532, debug=False):
         # Call the base class constructor
         # Note: BaseNTAG now dynamically initializes memory based on tag type,
