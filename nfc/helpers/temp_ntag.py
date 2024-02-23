@@ -1,4 +1,4 @@
-from ..nfc.NFC import NFC
+from ..nfc.chip.AbstractChip import NFC
 
 class NTAG(NFC):
     def __init__(self, pn532, debug=False):
@@ -137,3 +137,16 @@ class NTAG(NFC):
         except Exception as e:
             print("Error writing NDEF message to the tag:", e)
             return False
+
+
+__all__ = [
+    'i2c',
+    'spi',
+    'uart',
+    'PN532_I2C',
+    'PN532_SPI',
+    'PN532_UART'
+]
+from .communication.i2c import PN532_I2C
+from .communication.spi import PN532_SPI
+from .communication.uart import PN532_UART

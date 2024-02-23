@@ -1,11 +1,11 @@
-_NTAG_CMD_READ = 0x30
 import os
-import RPi.GPIO as GPIO
-from helpers import authenticate_user, create_link, process_nfc_url
-from pn532 import PN532_SPI as PN532
-from nfc import NTAG
 import logging
 from logging.handlers import RotatingFileHandler
+import RPi.GPIO as GPIO
+
+from nfc.communication import PN532_SPI as PN532
+from nfc.helpers import authenticate_user, create_link
+from nfc.tags import NTAG
 
 def setup_logging():
     log_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
@@ -62,18 +62,5 @@ def main():
     finally:
         GPIO.cleanup()
 
-    def read_block(self, block_number):
-        """
-        Read a block of data from the card.
-        """
-        response = self.pn532._call_function(params=[0x01, _NTAG_CMD_READ, block_number & 0xFF],
-                                             response_length=17)
-        if response is None:
-            print(f'Communication error while reading block {block_number}.')
-            return None
-        elif response[0] != 0x00:
-            print(f'Error reading block {block_number}: {response[0]}')
-            return None
-        return response[1:][:4]
 if __name__ == '__main__':
     main()

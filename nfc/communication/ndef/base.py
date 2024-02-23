@@ -1,45 +1,10 @@
-_NDEF_URIPREFIX_NONE = 0x00
-_NDEF_URIPREFIX_HTTP_WWWDOT = 0x01
-_NDEF_URIPREFIX_HTTPS_WWWDOT = 0x02
-_NDEF_URIPREFIX_HTTP = 0x03
-_NDEF_URIPREFIX_HTTPS = 0x04
-_NDEF_URIPREFIX_TEL = 0x05
-_NDEF_URIPREFIX_MAILTO = 0x06
-_NDEF_URIPREFIX_FTP_ANONAT = 0x07
-_NDEF_URIPREFIX_FTP_FTPDOT = 0x08
-_NDEF_URIPREFIX_FTPS = 0x09
-_NDEF_URIPREFIX_SFTP = 0x0A
-_NDEF_URIPREFIX_SMB = 0x0B
-_NDEF_URIPREFIX_NFS = 0x0C
-_NDEF_URIPREFIX_FTP = 0x0D
-_NDEF_URIPREFIX_DAV = 0x0E
-_NDEF_URIPREFIX_NEWS = 0x0F
-_NDEF_URIPREFIX_TELNET = 0x10
-_NDEF_URIPREFIX_IMAP = 0x11
-_NDEF_URIPREFIX_RTSP = 0x12
-_NDEF_URIPREFIX_URN = 0x13
-_NDEF_URIPREFIX_POP = 0x14
-_NDEF_URIPREFIX_SIP = 0x15
-_NDEF_URIPREFIX_SIPS = 0x16
-_NDEF_URIPREFIX_TFTP = 0x17
-_NDEF_URIPREFIX_BTSPP = 0x18
-_NDEF_URIPREFIX_BTL2CAP = 0x19
-_NDEF_URIPREFIX_BTGOEP = 0x1A
-_NDEF_URIPREFIX_TCPOBEX = 0x1B
-_NDEF_URIPREFIX_IRDAOBEX = 0x1C
-_NDEF_URIPREFIX_FILE = 0x1D
-_NDEF_URIPREFIX_URN_EPC_ID = 0x1E
-_NDEF_URIPREFIX_URN_EPC_TAG = 0x1F
-_NDEF_URIPREFIX_URN_EPC_PAT = 0x20
-_NDEF_URIPREFIX_URN_EPC_RAW = 0x21
-_NDEF_URIPREFIX_URN_EPC = 0x22
-_NDEF_URIPREFIX_URN_NFC = 0x23
+from .constants import *
 
 class NDEF:
     """
     Class for handling NDEF operations on an NTAG.
 
-    This class should be subclassed to implement the read_ndef_message and write_ndef_message methods.
+    This class should be subclassed to implement the readNDEF_message and writeNDEF_message methods.
 
     :param ntag: An instance of the NTAG class that this NDEF class will operate on.
     """
@@ -49,7 +14,12 @@ class NDEF:
 
         :param ntag: An instance of the NTAG class that this NDEF class will operate on.
         """
-        self.ntag = ntag
+        self._ntag = ntag
+        self._tnf = None
+        self._record_type = None
+        self._payload = None
+        self._id = ''
+        self._complete_record_cached = None
 
     def _create_message_flags(self, payload, id, tnf):
         """
@@ -73,8 +43,27 @@ class NDEF:
         :param payload: The payload to be encoded.
         :return: The encoded payload.
         """
-        uri_identifier_code = b'\x03' if self.ntag.debug else b'\x04'
-        return uri_identifier_code + payload.encode() if record_type == 'U' else payload.encode()
+        if record_type == 'U':
+            best_match_code = NDEF_URIPREFIX_NONE
+            max_prefix_length = 0
+            matched_prefix = ''
+
+            # Directly find the best matching URI prefix and its length
+            for prefix, code in URI_PREFIX_MAP.items():
+                if payload.startswith(prefix) and len(prefix) > max_prefix_length:
+                    best_match_code = code
+                    max_prefix_length = len(prefix)
+                    matched_prefix = prefix
+
+            # Remove the matched prefix from the payload
+            payload = payload[len(matched_prefix):]
+
+            # Prepend the URI prefix code to the payload
+            payload = bytes([best_match_code]) + payload.encode()
+        else:
+            payload = payload.encode()
+
+        return payload
 
     def _create_record_header(self, tnf, record_type, payload, id):
         """
@@ -107,7 +96,7 @@ class NDEF:
         tlv_length = len(complete_record).to_bytes(1 if len(complete_record) < 255 else 2, 'big')
         return b'\x03' + tlv_length + complete_record + b'\xFE'
 
-    def write_ndef_message(self, tnf, record_type, payload, id='', start_block=4):
+    def write_NDEF_message(self, tnf=TNF_EMPTY, record_type=None, payload=None, id='', start_block=4):
         """
         Writes an NDEF message to the specified NTAG, handling the message formatting,
         chunking, and writing process.
@@ -118,17 +107,20 @@ class NDEF:
         :param id: An optional record ID.
         :param start_block: The starting block number to write the message.
         """
-        if start_block < 4 or start_block > self.ntag.max_block:
-            self.ntag.log(f"Invalid start block {start_block} for NDEF message.", "error")
+        if tnf == self.TNF_EMPTY:
+            self._ntag.log("TNF_EMPTY passed. No NDEF message to write.", "info")
+            return 
+        if start_block < 4 or start_block > self._ntag.max_block:
+            self._ntag.log(f"Invalid start block {start_block} for NDEF message.", "error")
             raise ValueError("Invalid start block for NDEF message.")
         try:
             complete_record = self._construct_complete_record(tnf, record_type, payload, id)
             chunks = [complete_record[i:i+4] for i in range(0, len(complete_record), 4)]
             for i, chunk in enumerate(chunks, start=start_block):
-                self.ntag.write_block(i, chunk + b'\x00' * (4 - len(chunk)))  # Pads chunk if necessary
-            self.ntag.log("Successfully wrote NDEF message to the NFC tag.", "info")
+                self._ntag.write_block(i, chunk + b'\x00' * (4 - len(chunk)))  # Pads chunk if necessary
+            self._ntag.log("Successfully wrote NDEF message to the NFC tag.", "info")
         except IOError as e:
-            self.ntag.log(f"I/O Error writing NDEF message to the tag: {e}", "error")
+            self._ntag.log(f"I/O Error writing NDEF message to the tag: {e}", "error")
         except ValueError as e:
-            self.ntag.log(f"Value Error in NDEF data: {e}", "error")
+            self._ntag.log(f"Value Error in NDEF data: {e}", "error")
 

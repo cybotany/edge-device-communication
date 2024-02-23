@@ -31,65 +31,41 @@ using UART (ttyS0) on the Raspberry Pi.
 import time
 import serial
 import RPi.GPIO as GPIO
-from .pn532 import PN532, BusyError
+from .pn532 import PN532, BusyError, PN532Error
 
 DEV_SERIAL = '/dev/ttyS0'
 BAUD_RATE = 115200
 
-
 class PN532_UART(PN532):
     """
-    Driver for the PN532 connected over UART. Pass in a hardware UART device.
-    Optional IRQ pin (not used), reset pin and debugging output. 
+    Driver for the PN532 connected over UART.
     """
-    def __init__(self, dev=DEV_SERIAL, baudrate=BAUD_RATE,
-                irq=None, reset=None, debug=False):
-        """
-        Create an instance of the PN532 class using UART
-        before running __init__, you should:
-         - disable serial login shell
-         - enable serial port hardware
-        using 'sudo raspi-config' --> 'Interfacing Options' --> 'Serial'
-        """
-
-        self.debug = debug
-        self._gpio_init(irq=irq, reset=reset)
+    def __init__(self, dev=DEV_SERIAL, baudrate=BAUD_RATE, irq=None, reset=None, debug=False):
         self._uart = serial.Serial(dev, baudrate)
         if not self._uart.is_open:
-            raise RuntimeError('cannot open {0}'.format(dev))
+            raise RuntimeError(f'cannot open {dev}')
+        # Initialize GPIOs if needed before calling super().__init__
+        if irq is not None:
+            self._setup_pin(irq, GPIO.IN)
         super().__init__(debug=debug, reset=reset)
 
-    def _gpio_init(self, reset=None,irq=None):
-        self._irq = irq
-        GPIO.setmode(GPIO.BCM)
-        if reset:
-            GPIO.setup(reset, GPIO.OUT)
-            GPIO.output(reset, True)
-        if irq:
-            GPIO.setup(irq, GPIO.IN)
+    def _gpio_init(self, **kwargs):
+        # Initialize GPIO pins specific to UART communication if needed.
+        # This example assumes IRQ handling is the only GPIO operation not covered by the base class.
+        pass
 
-    def _reset(self, pin):
-        """
-        Perform a hardware reset toggle
-        """
-        GPIO.output(pin, True)
-        time.sleep(0.1)
-        GPIO.output(pin, False)
-        time.sleep(0.5)
-        GPIO.output(pin, True)
-        time.sleep(0.1)
+    def _reset(self):
+        # Reset functionality might already be adequately handled by the base class.
+        # If UART requires a specific reset sequence, implement it here.
+        super()._reset()
 
     def _wakeup(self):
-        """
-        Send any special commands/data to wake up PN532
-        """
+        # Specific wakeup commands for UART communication.
         self._uart.write(b'\x55\x55\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
         self.SAM_configuration()
 
     def _wait_ready(self, timeout=0.001):
-        """
-        Wait for response frame, up to `timeout` seconds
-        """
+        # Wait for the UART device to be ready.
         timestamp = time.monotonic()
         while (time.monotonic() - timestamp) < timeout:
             if self._uart.in_waiting:
@@ -99,21 +75,13 @@ class PN532_UART(PN532):
         return False
 
     def _read_data(self, count):
-        """
-        Read a specified count of bytes from the PN532.
-        """
+        # Read data from UART.
         frame = self._uart.read(min(self._uart.in_waiting, count))
         if not frame:
             raise BusyError("No data read from PN532")
-        if self.debug:
-            print("Reading: ", [hex(i) for i in frame])
-        else:
-            time.sleep(0.005)
         return frame
 
     def _write_data(self, framebytes):
-        """
-        Write a specified count of bytes to the PN532
-        """
-        self._uart.read(self._uart.in_waiting)
+        # Write data to UART.
+        self._uart.read(self._uart.in_waiting)  # Clear buffer before writing
         self._uart.write(framebytes)

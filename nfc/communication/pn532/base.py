@@ -24,24 +24,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from abc import ABC, abstractmethod
 import RPi.GPIO as GPIO
-from .constants import (PN532_ERRORS,
-                        _HOSTTOPN532,
-                        _PREAMBLE,
-                        _STARTCODE1,
-                        _STARTCODE2,
-                        _POSTAMBLE,
-                        _ISO14443A,
-                        _ACK,
-                        _PN532_CMD_GETFIRMWAREVERSION,
-                        _PN532_CMD_READGPIO,
-                        _PN532_CMD_WRITEGPIO,
-                        _PN532_CMD_SAMCONFIGURATION,
-                        _PN532_CMD_INLISTPASSIVETARGET,
-                        _PN532_CMD_INDATAEXCHANGE,
-                        _PN532_CMD_TGINITASTARGET)
-
+from .constants import *
 
 class PN532Error(Exception):
     """
@@ -50,7 +35,7 @@ class PN532Error(Exception):
     def __init__(self, err):
         Exception.__init__(self)
         self.err = err
-        self.errmsg = PN532_ERRORS[err]
+        self.errmsg = PN532_ERROR_MAPPING[err]
 
 class BusyError(Exception):
     """
@@ -59,40 +44,87 @@ class BusyError(Exception):
     pass
 
 
-class PN532:
+class PN532(ABC):
     """
     Driver for the PN532 NFC Hat. Extend for specific interfaces (I2C/SPI/UART).
     """
-
     def __init__(self, *, debug=False, reset=None):
         """
         Create an instance of the PN532 class
         """
         self.debug = debug
-        if reset:
+        GPIO.setmode(GPIO.BCM)
+        if reset is not None:
+            self._setup_pin(reset, GPIO.OUT, True)
             if self.debug:
                 print('Resetting PN532.')
+            self._reset()
         self._wakeup()
+
         try:
-            self._get_firmware_version() # first time often fails, try twice
+            self._get_firmware_version()  # first time often fails, try twice
         except (BusyError, RuntimeError):
             pass
         self._get_firmware_version()
 
+    def _setup_pin(self, pin, direction, initial_state=False):
+        GPIO.setup(pin, direction)
+        if direction == GPIO.OUT:
+            GPIO.output(pin, initial_state)
+
+    @abstractmethod
     def _gpio_init(self, **kwargs):
         """
-        Hardware GPIO init
+        Hardware GPIO init. Subclasses MUST implement this!
         """
-        raise NotImplementedError
+        pass
 
-    def _call_function(self, command=_PN532_CMD_INDATAEXCHANGE, response_length=0, params=None, timeout=1):
+    @abstractmethod
+    def _reset(self):
+        """
+        Perform a hardware reset toggle. Subclasses MUST implement this!
+        """
+        pass
+
+    @abstractmethod
+    def _wakeup(self):
+        """
+        Send special command to wake up. Subclasses MUST implement this!
+        """
+        pass
+
+    @abstractmethod
+    def _read_data(self, count):
+        """
+        Read raw data from device, not including status bytes.
+        Subclasses MUST implement this!
+        """
+        pass
+
+    @abstractmethod
+    def _write_data(self, framebytes):
+        """
+        Write raw bytestring data to device, not including status bytes.
+        Subclasses MUST implement this!
+        """
+        pass
+
+    @abstractmethod
+    def _wait_ready(self, timeout):
+        """
+        Check if busy up to max length of 'timeout' seconds.
+        Subclasses MUST implement this!
+        """
+        pass
+
+    def _call_function(self, command=PN532_CMD_INDATAEXCHANGE, response_length=0, params=None, timeout=1):
         """
         Send specified command to the PN532
         """
         if params is None:
             params = []
         packet_data = bytearray(2 + len(params))
-        packet_data[0] = _HOSTTOPN532
+        packet_data[0] = HOSTTOPN532
         packet_data[1] = command & 0xFF
         for i, val in enumerate(params):
             packet_data[2+i] = val
@@ -112,7 +144,7 @@ class PN532:
         """
         Retrieve the firmware version from the PN532.
         """
-        response = self._call_function(_PN532_CMD_GETFIRMWAREVERSION,
+        response = self._call_function(PN532_CMD_GETFIRMWAREVERSION,
                                        response_length=4,
                                        timeout=0.5)
         if response is None:
@@ -122,55 +154,22 @@ class PN532:
             print(f'Found PN532 with firmware version: {ver}.{rev}')
         return
 
-    def _reset(self, pin):
-        """
-        Perform a hardware reset toggle
-        """
-        raise NotImplementedError
-
-    def _read_data(self, count):
-        """
-        Read raw data from device, not including status bytes:
-        Subclasses MUST implement this!
-        """
-        raise NotImplementedError
-
-    def _write_data(self, framebytes):
-        """
-        Write raw bytestring data to device, not including status bytes:
-        Subclasses MUST implement this!
-        """
-        raise NotImplementedError
-
-    def _wait_ready(self, timeout):
-        """
-        Check if busy up to max length of 'timeout' seconds
-        Subclasses MUST implement this!
-        """
-        raise NotImplementedError
-
-    def _wakeup(self):
-        """
-        Send special command to wake up
-        """
-        raise NotImplementedError
-
     def _build_frame(self, packet_data):
         """
         Handle the construction of a frame.
         """
         packet_length = len(packet_data)
         frame = bytearray(packet_length + 7)
-        frame[0] = _PREAMBLE
-        frame[1] = _STARTCODE1
-        frame[2] = _STARTCODE2
+        frame[0] = PREAMBLE
+        frame[1] = STARTCODE1
+        frame[2] = STARTCODE2
         checksum = sum(frame[0:3])
         frame[3] = packet_length & 0xFF
         frame[4] = (~packet_length + 1) & 0xFF
         frame[5:-2] = packet_data
         checksum += sum(packet_data)
         frame[-2] = ~checksum & 0xFF
-        frame[-1] = _POSTAMBLE
+        frame[-1] = POSTAMBLE
         return frame
    
     def _parse_frame(self, packet_data):
@@ -220,8 +219,8 @@ class PN532:
         """
         Wait for an ACK response within the given timeout.
         """
-        ack = self._read_data(len(_ACK))
-        if ack == _ACK:
+        ack = self._read_data(len(ACK))
+        if ack == ACK:
             return True
         return False
 
@@ -234,16 +233,16 @@ class PN532:
         :param timeout: Defines the time-out only in Virtual card configuration.
         :param irq: Specifies if the PN532 takes care of the P70_IRQ pin or not.
         """
-        self._call_function(_PN532_CMD_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
+        self._call_function(PN532_CMD_SAMCONFIGURATION, params=[0x01, 0x14, 0x01])
 
-    def list_passive_target(self, card_baud=_ISO14443A, timeout=1):
+    def list_passive_target(self, card_baud=ISO14443A, timeout=1):
         """
         Wait for an NTAG to be available and return its UID when found.
         The goal of this command is to detect as many targets (maximum MaxTg)
         as possible in passive mode. 
         """
         try:
-            response = self._call_function(_PN532_CMD_INLISTPASSIVETARGET,
+            response = self._call_function(PN532_CMD_INLISTPASSIVETARGET,
                                            params=[0x01, card_baud],
                                            response_length=19,
                                            timeout=timeout)
@@ -278,7 +277,7 @@ class PN532:
             P3[7] = 0,     P7[7] = 0,   I[7] = 0,
         If 'pin' is not None, returns the specified pin state.
         """
-        response = self._call_function(_PN532_CMD_READGPIO, response_length=3)
+        response = self._call_function(PN532_CMD_READGPIO, response_length=3)
         if not pin:
             return tuple(response[:3])
         pins = {'p3': response[0], 'p7': response[1], 'i': response[2]}
@@ -318,7 +317,7 @@ class PN532:
             # 0x80, the validation bit.
             params[0] = 0x80 | p3 & 0xFF if p3 else 0x00
             params[1] = 0x80 | p7 & 0xFF if p7 else 0x00
-            self._call_function(_PN532_CMD_WRITEGPIO, params=params)
+            self._call_function(PN532_CMD_WRITEGPIO, params=params)
         else:
             if pin[:-1].lower() not in ('p3', 'p7'):
                 return
@@ -337,7 +336,7 @@ class PN532:
                 else:
                     params[1] = 0x80 | p7 & ~(1 << int(pin[-1])) & 0xFF
                 params[0] = 0x00    # leave p3 unchanged
-            self._call_function(_PN532_CMD_WRITEGPIO, params=params)
+            self._call_function(PN532_CMD_WRITEGPIO, params=params)
 
     def tg_init_as_target(self, mode, mifare_params=None, felica_params=None, nfcid3t=None, gt=None, tk=None, timeout=60):
         """
@@ -385,7 +384,7 @@ class PN532:
         else:
             params.append(0x00)
         # Try to read 64 bytes although the response length is not fixed
-        response = self._call_function(_PN532_CMD_TGINITASTARGET, 64, params=params, timeout=timeout)
+        response = self._call_function(PN532_CMD_TGINITASTARGET, 64, params=params, timeout=timeout)
         if response:
             mode_activated = response[0]
             initiator_command = response[1:]

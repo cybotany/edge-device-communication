@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 import logging
 
-class NFC(ABC):
+class BaseChip(ABC):
     """
-    Abstract base class for NFC tags interaction through a PN532 NFC/RFID controller.
+    Abstract base class for NFC chips interaction through a PN532 NFC/RFID controller.
 
     This class defines a common interface for various NFC operations.
 

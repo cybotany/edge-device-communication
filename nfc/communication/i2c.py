@@ -32,7 +32,7 @@ import fcntl
 import os
 import time
 import RPi.GPIO as GPIO
-from .pn532 import PN532, BusyError
+from .pn532 import PN532, BusyError, PN532Error
 
 I2C_ADDRESS = 0x24
 I2C_CHANNEL = 1
@@ -74,56 +74,41 @@ class PN532_I2C(PN532):
         uses clock stretching. Optional IRQ pin (not used),
         reset pin and debugging output.
         """
-        self.debug = debug
-        self._irq = irq
-        self._req = req
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(reset, GPIO.OUT)
-        GPIO.setup(req, GPIO.OUT)
-        self._gpio_init(irq=irq, req=req, reset=reset)
         self._i2c = I2CDevice(I2C_CHANNEL, I2C_ADDRESS)
+        # Call the superclass constructor first to ensure GPIO is set up before calling _gpio_init
         super().__init__(debug=debug, reset=reset)
+        # Now that GPIO.setmode has been called in the superclass, perform subclass-specific setup
+        self._gpio_init(irq=irq, req=req, reset=reset)
 
-    def _gpio_init(self, reset, irq=None, req=None):
-        self._irq = irq
-        self._req = req
-        GPIO.setmode(GPIO.BCM)
-        if reset:
-            GPIO.setup(reset, GPIO.OUT)
-            GPIO.output(reset, True)
-        if irq:
-            GPIO.setup(irq, GPIO.IN)
-        if req:
-            GPIO.setup(req, GPIO.OUT)
-            GPIO.output(req, True)
+    def _gpio_init(self, reset=None, irq=None, req=None):
+        # Setup for IRQ and REQ pins specific to the I2C subclass
+        if irq is not None:
+            self._setup_pin(irq, GPIO.IN)
+        if req is not None:
+            self._setup_pin(req, GPIO.OUT, True)
 
-    def _reset(self, pin):
-        """
-        Perform a hardware reset toggle
-        """
-        GPIO.output(pin, True)
-        time.sleep(0.1)
-        GPIO.output(pin, False)
-        time.sleep(0.5)
-        GPIO.output(pin, True)
-        time.sleep(0.1)
+    def _reset(self):
+        # Implement the _reset method specific to I2C if needed
+        if self.reset_pin is not None:
+            GPIO.output(self.reset_pin, True)
+            time.sleep(0.1)
+            GPIO.output(self.reset_pin, False)
+            time.sleep(0.5)
+            GPIO.output(self.reset_pin, True)
+            time.sleep(0.1)
 
     def _wakeup(self):
-        """
-        Send any special commands/data to wake up PN532
-        """
+        # Implement the _wakeup method specific to I2C
         if self._req:
             GPIO.output(self._req, True)
             time.sleep(0.1)
             GPIO.output(self._req, False)
             time.sleep(0.1)
             GPIO.output(self._req, True)
-        time.sleep(0.5)
+            time.sleep(0.5)
 
     def _wait_ready(self, timeout=10):
-        """
-        Poll PN532 if status byte is ready, up to `timeout` seconds
-        """
+        # Implement the _wait_ready method specific to I2C
         time.sleep(0.01)
         status = bytearray(1)
         timestamp = time.monotonic()
@@ -139,9 +124,7 @@ class PN532_I2C(PN532):
         return False
 
     def _read_data(self, count):
-        """
-        Read a specified count of bytes from the PN532.
-        """
+        # Implement the _read_data method specific to I2C
         try:
             status = self._i2c.read(1)[0]
             if status != 0x01:
@@ -159,7 +142,5 @@ class PN532_I2C(PN532):
         return frame[1:]
 
     def _write_data(self, framebytes):
-        """
-        Write a specified count of bytes to the PN532
-        """
+        # Implement the _write_data method specific to I2C
         self._i2c.write(framebytes)

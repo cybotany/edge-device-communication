@@ -31,7 +31,7 @@ using SPI on the Raspberry Pi.
 import time
 import spidev
 import RPi.GPIO as GPIO
-from .pn532 import PN532
+from .pn532.base import PN532, BusyError, PN532Error
 
 _SPI_STATREAD = 0x02
 _SPI_DATAWRITE = 0x01
@@ -99,58 +99,37 @@ def reverse_bit(num):
 
 class PN532_SPI(PN532):
     """
-    Driver for the PN532 connected over SPI. Pass in a hardware SPI device
-    & chip select digitalInOut pin. Optional IRQ pin (not used), reset pin and
-    debugging output.
+    Driver for the PN532 connected over SPI.
     """
     def __init__(self, cs=None, irq=None, reset=None, debug=False):
-        """
-        Create an instance of the PN532 class using SPI
-        """
-        self.debug = debug
-        self._gpio_init(cs=cs, irq=irq, reset=reset)
+        # Initialize SPI device
         self._spi = SPIDevice(cs)
+        # Call the superclass constructor to handle common setup, including GPIO mode
         super().__init__(debug=debug, reset=reset)
+        # Now handle SPI-specific GPIO setup
+        self._gpio_init(cs=cs, irq=irq, reset=reset)
 
     def _gpio_init(self, reset=None, cs=None, irq=None):
+        # Direct GPIO setup for SPI-specific pins
         self._cs = cs
         self._irq = irq
-        GPIO.setmode(GPIO.BCM)
-        if reset:
-            GPIO.setup(reset, GPIO.OUT)
-            GPIO.output(reset, True)
-        if cs:
-            GPIO.setup(cs, GPIO.OUT)
-            GPIO.output(cs, True)
-        if irq:
-            GPIO.setup(irq, GPIO.IN)
+        if cs is not None:
+            self._setup_pin(cs, GPIO.OUT, True)
+        if irq is not None:
+            self._setup_pin(irq, GPIO.IN)
 
-    def _reset(self, pin):
-        """
-        Perform a hardware reset toggle
-        """
-        GPIO.output(pin, True)
-        time.sleep(0.1)
-        GPIO.output(pin, False)
-        time.sleep(0.5)
-        GPIO.output(pin, True)
-        time.sleep(0.1)
+    def _reset(self):
+        # Implement the _reset method specific to SPI if needed
+        super()._reset()
 
     def _wakeup(self):
-        """
-        Send any special commands/data to wake up PN532
-        """
+        # SPI-specific wakeup commands
         time.sleep(1)
-        if self._cs:
-            GPIO.output(self._cs, GPIO.LOW)
-        time.sleep(0.002)
         self._spi.writebytes(bytearray([0x00]))
         time.sleep(1)
 
     def _wait_ready(self, timeout=1):
-        """
-        Poll PN532 if status byte is ready, up to `timeout` seconds
-        """
+        # Poll the PN532 if the status byte is ready
         status = bytearray([reverse_bit(_SPI_STATREAD), 0])
         timestamp = time.monotonic()
         while (time.monotonic() - timestamp) < timeout:
@@ -158,30 +137,19 @@ class PN532_SPI(PN532):
             status = self._spi.xfer(status)
             if reverse_bit(status[1]) == _SPI_READY:
                 return True
-            else:
-                time.sleep(0.005)
+            time.sleep(0.005)
         return False
 
     def _read_data(self, count):
-        """
-        Read a specified count of bytes from the PN532.
-        """
-        frame = bytearray(count+1)
+        # Read data from SPI
+        frame = bytearray(count + 1)
         frame[0] = reverse_bit(_SPI_DATAREAD)
-        time.sleep(0.005)
         frame = self._spi.xfer(frame)
         for i, val in enumerate(frame):
             frame[i] = reverse_bit(val)
-        #if self.debug:
-        #    print("Reading: ", [hex(i) for i in frame[1:]])
         return frame[1:]
 
     def _write_data(self, framebytes):
-        """
-        Write a specified count of bytes to the PN532
-        """
+        # Write data to SPI
         rev_frame = [reverse_bit(x) for x in bytes([_SPI_DATAWRITE]) + framebytes]
-        #if self.debug:
-        #    print("Writing: ", [hex(i) for i in rev_frame])
-        time.sleep(0.02)
         self._spi.writebytes(bytes(rev_frame))
