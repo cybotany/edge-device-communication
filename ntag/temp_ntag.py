@@ -1,17 +1,6 @@
-import logging
-from .base_ntag import BaseNTAG
-from .constants import (
-    _NTAG_CMD_READ,
-    _NTAG_CMD_WRITE,
+from .AbstractNTAG import AbstractNTAG
 
-    _CONFIG_PAGE_START,
-    _CONFIG_PAGE_END,
-
-    _MIRROR_CONF_BIT_POS,
-    _MIRROR_BYTE_BIT_POS
-)
-
-class NTAG(BaseNTAG):
+class NTAG(AbstractNTAG):
     def __init__(self, pn532, debug=False):
         # Call the base class constructor
         # Note: BaseNTAG now dynamically initializes memory based on tag type,

@@ -24,10 +24,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""
-This module will let you communicate with a PN532 NFC Hat using I2C, SPI or UART.
-The main difference is the interfaces implements.
-"""
+
 import RPi.GPIO as GPIO
 from .constants import (PN532_ERRORS,
                         _HOSTTOPN532,
@@ -38,9 +35,12 @@ from .constants import (PN532_ERRORS,
                         _ISO14443A,
                         _ACK,
                         _PN532_CMD_GETFIRMWAREVERSION,
+                        _PN532_CMD_READGPIO,
+                        _PN532_CMD_WRITEGPIO,
                         _PN532_CMD_SAMCONFIGURATION,
                         _PN532_CMD_INLISTPASSIVETARGET,
-                        _PN532_CMD_INDATAEXCHANGE)
+                        _PN532_CMD_INDATAEXCHANGE,
+                        _PN532_CMD_TGINITASTARGET)
 
 
 class PN532Error(Exception):
@@ -48,8 +48,9 @@ class PN532Error(Exception):
     PN532 error code
     """
     def __init__(self, err):
-        super().__init__(PN532_ERRORS.get(err, 'Unknown Error'))
-
+        Exception.__init__(self)
+        self.err = err
+        self.errmsg = PN532_ERRORS[err]
 
 class BusyError(Exception):
     """
@@ -69,8 +70,14 @@ class PN532:
         """
         self.debug = debug
         if reset:
-            self._reset(reset)
-        self._initialize()
+            if self.debug:
+                print('Resetting PN532.')
+        self._wakeup()
+        try:
+            self._get_firmware_version() # first time often fails, try twice
+        except (BusyError, RuntimeError):
+            pass
+        self._get_firmware_version()
 
     def _gpio_init(self, **kwargs):
         """
@@ -114,16 +121,6 @@ class PN532:
         if self.debug:
             print(f'Found PN532 with firmware version: {ver}.{rev}')
         return
-
-    def _initialize(self):
-        """
-        Initialize the device and check its firmware version.
-        """
-        self._wakeup()
-        try:
-            self._get_firmware_version()
-        except (BusyError, RuntimeError):
-            self._get_firmware_version()
 
     def _reset(self, pin):
         """
@@ -262,3 +259,134 @@ class PN532:
             raise RuntimeError('Found card with unexpectedly long UID!')
         # Return UID of card.
         return response[6:6 + response[5]]
+
+    def read_gpio(self, pin=None):
+        """
+        Read the state of the PN532's GPIO pins.
+
+        :params pin: <str> specified the pin to read
+        :return:
+
+        If 'pin' is None, returns 3 bytes containing the pin state where:
+            P3[0] = P30,   P7[0] = 0,   I[0] = I0,
+            P3[1] = P31,   P7[1] = P71, I[1] = I1,
+            P3[2] = P32,   P7[2] = P72, I[2] = 0,
+            P3[3] = P33,   P7[3] = 0,   I[3] = 0,
+            P3[4] = P34,   P7[4] = 0,   I[4] = 0,
+            P3[5] = P35,   P7[5] = 0,   I[5] = 0,
+            P3[6] = 0,     P7[6] = 0,   I[6] = 0,
+            P3[7] = 0,     P7[7] = 0,   I[7] = 0,
+        If 'pin' is not None, returns the specified pin state.
+        """
+        response = self._call_function(_PN532_CMD_READGPIO, response_length=3)
+        if not pin:
+            return tuple(response[:3])
+        pins = {'p3': response[0], 'p7': response[1], 'i': response[2]}
+        if pin[:-1].lower() not in pins.keys():
+            return False
+        return True if pins[pin[:-1].lower()] >> int(pin[-1]) & 1 else False
+
+    def write_gpio(self, pin=None, state=None, p3=None, p7=None):
+        """
+        Write the state to the PN532's GPIO pins.
+
+        :params pin: <str> specified the pin to write
+        :params state: <bool> pin level
+        :params p3: byte to set multiple pins level
+        :params p7: byte to set multiple pins level
+
+        If p3 or p7 is not None, set the pins with p3 or p7, there is
+        no need to read pin states before write with the param p3 or p7
+        bits:
+            P3[0] = P30,   P7[0] = 0,
+            P3[1] = P31,   P7[1] = P71,
+            P3[2] = P32,   P7[2] = P72,
+            P3[3] = P33,   P7[3] = nu,
+            P3[4] = P34,   P7[4] = nu,
+            P3[5] = P35,   P7[5] = nu,
+            P3[6] = nu,    P7[6] = nu,
+            P3[7] = Val,   P7[7] = Val,
+        For each port that is validated (bit Val = 1), all the bits are applied
+        simultaneously. It is not possible for example to modify the state of
+        the port P32 without applying a value to the ports P30, P31, P33, P34
+        and P35.
+
+        If p3 and p7 are None, set one pin with the params 'pin' and 'state'
+        """
+        params = bytearray(2)
+        if (p3 is not None) or (p7 is not None):
+            # 0x80, the validation bit.
+            params[0] = 0x80 | p3 & 0xFF if p3 else 0x00
+            params[1] = 0x80 | p7 & 0xFF if p7 else 0x00
+            self._call_function(_PN532_CMD_WRITEGPIO, params=params)
+        else:
+            if pin[:-1].lower() not in ('p3', 'p7'):
+                return
+            p3, p7, _ = self.read_gpio()
+            if pin[:-1].lower() == 'p3':
+                if state:
+                    # 0x80, the validation bit.
+                    params[0] = 0x80 | p3 | (1 << int(pin[-1])) & 0xFF
+                else:
+                    params[0] = 0x80 | p3 & ~(1 << int(pin[-1])) & 0xFF
+                params[1] = 0x00    # leave p7 unchanged
+            if pin[:-1].lower() == 'p7':
+                if state:
+                    # 0x80, the validation bit.
+                    params[1] = 0x80 | p7 | (1 << int(pin[-1])) & 0xFF
+                else:
+                    params[1] = 0x80 | p7 & ~(1 << int(pin[-1])) & 0xFF
+                params[0] = 0x00    # leave p3 unchanged
+            self._call_function(_PN532_CMD_WRITEGPIO, params=params)
+
+    def tg_init_as_target(self, mode, mifare_params=None, felica_params=None, nfcid3t=None, gt=None, tk=None, timeout=60):
+        """
+        The host controller uses this command to configure the PN532 as
+        target.
+
+        :params mode: a byte indicating which mode the PN532 should respect.
+        :params mifare_params: information needed to be able to be
+        activated at 106 kbps in passive mode.
+        :params felica_params: information to be able to respond to a polling
+        request at 212/424 kbps in passive mode.
+        :params nfcid3t: used in the ATR_RES in case of ATR_REQ received from
+        the initiator
+        :params gt: an array containing the general bytes to be used in the
+        ATR_RES. This information is optional and the length is not fixed
+        (max. 47 bytes),
+        :params tk: an array containing the historical bytes to be used in the
+        ATS when PN532 is in ISO/IEC14443-4 PICC emulation mode. This
+        information is optional.
+    
+        :returns mode: a byte indicating in which mode the PN532 has been
+        activated.
+        :returns initiator_command: an array containing the first valid frame
+        received by the PN532 once the PN532 has been initialized.
+        """
+        if not mifare_params:
+            mifare_params = [0] * 6
+        if not felica_params:
+            felica_params = [0] * 18
+        if not nfcid3t:
+            nfcid3t = [0] * 10
+        params = []
+        params.append(mode)
+        params += mifare_params
+        params += felica_params
+        params += nfcid3t
+        if gt:
+            params.append(len(gt))
+            params += gt
+        else:
+            params.append(0x00)
+        if tk:
+            params.append(len(tk))
+            params += tk
+        else:
+            params.append(0x00)
+        # Try to read 64 bytes although the response length is not fixed
+        response = self._call_function(_PN532_CMD_TGINITASTARGET, 64, params=params, timeout=timeout)
+        if response:
+            mode_activated = response[0]
+            initiator_command = response[1:]
+            return (mode_activated, initiator_command)
