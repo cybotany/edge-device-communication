@@ -110,3 +110,31 @@ class NTAG(BaseChip):
             list[list[int]]: The configuration pages if successfully fetched, None otherwise.
         """
         return self._fetch_memory_range(*self._configuration_pages_range)
+
+    def write_ndef_message(self, tnf, record_type, payload, id=''):
+        # Simplified example for writing a URI record
+        # This needs to be expanded to handle the NDEF message structure properly
+        # Convert the payload to a format suitable for writing, e.g., a byte array
+        data = bytearray(payload, 'utf-8')
+        
+        # Write data to user memory starting from the first user page
+        # Assumes `data` fits within the user memory; you need to add checks and splitting for larger data
+        current_page = self._user_memory_range[0]
+        for i in range(0, len(data), self.block_size):
+            block_data = data[i:i+self.block_size]
+            if len(block_data) < self.block_size:
+                block_data += bytearray(self.block_size - len(block_data))  # Pad with zeros
+            self.write_block(current_page, list(block_data))
+            current_page += 1
+        return True
+
+    def read_ndef_message(self):
+        # Simplified example for reading from the user memory area
+        # This needs proper parsing of the NDEF structure
+        user_memory = self.user_memory
+        message = bytearray()
+        for page in user_memory:
+            message += bytearray(page)
+        # Here you would add parsing of the NDEF message from `message`
+        # For simplicity, we're just converting it to a string
+        return message.decode('utf-8')

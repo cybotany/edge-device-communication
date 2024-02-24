@@ -45,15 +45,30 @@ def main():
                 last_uid = uid
                 clean_uid = ':'.join(['{:02X}'.format(i) for i in uid])
                 if clean_uid not in ntags:
-                    ntags.append(clean_uid)
                     logging.info(f'Found new NTAG: {clean_uid}')
 
-                    # Create a new NTAG instance for the new UID
-                    ntag = NTAG(pn532, clean_uid)
-                    ntags.append(ntag)
+                    try:
+                        # Create a new NTAG instance for the new UID
+                        ntag = NTAG(pn532, clean_uid)
 
-                    api_url = f'{api_url_base}{clean_uid}/'
-                    create_link(api_url, token, clean_uid)
+                        # THIS LOGIC
+                        # Write NDEF message to the NTAG from pn532
+                        # ntag.write_ndef_message(tnf=0x01, record_type='U', payload='https://www.example.com', id='')
+                        
+                        # Read NDEF message from the NTAG to verify the write
+                        # ntag.read_ndef_message()
+                        # THIS LOGIC END
+
+                        # If successful, create an NTAG instance in the database
+                        api_url = f'{api_url_base}{clean_uid}/'
+                        response_status = create_link(api_url, token, clean_uid)
+
+                        if response_status:
+                            ntags.append(ntag)
+
+                    except Exception as e:
+                        # Log the error and continue
+                        logging.error(e)
 
                 else:
                     logging.info(f'Found duplicate NTAG: {clean_uid}')
