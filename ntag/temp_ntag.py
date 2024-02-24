@@ -1,19 +1,25 @@
-from .constants import (_NTAG_CMD_READ,
-                        _NTAG_CMD_WRITE,
+import logging
+from .base_ntag import BaseNTAG
+from .constants import (
+    _NTAG_CMD_READ,
+    _NTAG_CMD_WRITE,
 
-                        _CONFIG_PAGE_START,
-                        _CONFIG_PAGE_END,
+    _CONFIG_PAGE_START,
+    _CONFIG_PAGE_END,
 
-                        _MIRROR_CONF_BIT_POS,
-                        _MIRROR_BYTE_BIT_POS)
+    _MIRROR_CONF_BIT_POS,
+    _MIRROR_BYTE_BIT_POS
+)
 
-class NTAG213:
+class NTAG(BaseNTAG):
     def __init__(self, pn532, debug=False):
-        # Initialize memory: 45 pages, 4 bytes per page
-        self.pn532 = pn532
-        self.debug = debug
-        self.memory = [[0x00 for _ in range(4)] for _ in range(45)]
-        self._initialize_memory()
+        # Call the base class constructor
+        # Note: BaseNTAG now dynamically initializes memory based on tag type,
+        # so we don't need to set it here.
+        super().__init__(pn532, debug=debug)
+        # Override tag_type and pages if necessary, or ensure it's set correctly in BaseNTAG
+        self.tag_type = 'NTAG213'  # This might be redundant if BaseNTAG already determines it
+        self.pages = 45  # NTAG213 has 45 pages. This might be redundant.
 
     def _initialize_memory(self):
         """
@@ -22,67 +28,10 @@ class NTAG213:
         Block 4: NDEF Magic Number
         Block 5: Pre-programmed data
         """
+        super()._initialize_memory()
         self.memory[3] = [0xE1, 0x10, 0x12, 0x00]
         self.memory[4] = [0x01, 0x03, 0xA0, 0x0C]
         self.memory[5] = [0x34, 0x03, 0x00, 0xFE]
-
-    def write_block(self, block_number, data):
-        """
-        Write a block of data to the card.
-        """
-        if not (0 <= block_number < 45):
-            raise ValueError("Block number out of range")
-        if not data or not 1 < len(data) <= 4:
-            raise ValueError('Data must be an array of 1 to 4 bytes.')
-
-        params = bytearray(3 + len(data))
-        params[0] = 0x01
-        params[1] = _NTAG_CMD_WRITE
-        params[2] = block_number & 0xFF
-        params[3:] = data
-        response = self.pn532._call_function(params=params, response_length=1)
-        if response[0]:
-            print('Error writing block {}: {}'.format(block_number, response[0]))
-        return response[0] == 0x00
-
-    def read_block(self, block_number):
-        """
-        Read a block of data from the card.
-        """
-        if not (0 <= block_number < 45):
-            raise ValueError("Block number out of range")
-
-        params = [0x01, _NTAG_CMD_READ, block_number & 0xFF] 
-        response = self.pn532._call_function(params=params,
-                                             response_length=17)
-        if response is None:
-            print(f'Communication error while reading block {block_number}.')
-            return None
-        elif response[0] != 0x00:
-            print(f'Error reading block {block_number}: {response[0]}')
-            return None
-        return response[1:][:4]
-
-    def dump(self, start_block=0, end_block=44):
-        """
-        Reads specified range of pages (blocks) of the NTAG2xx NFC tag.
-        """
-        print(f"Reading NTAG213 NFC tag from block {start_block} to block {end_block}...")
-
-        all_data = []
-        for block_number in range(start_block, end_block + 1):
-            block_data = self.read_block(block_number)
-            if block_data is None:
-                print(f"Error or no response while reading block {block_number}.")
-                break
-
-            formatted_block_data = ' '.join(['%02X' % x for x in block_data])
-            all_data.append(formatted_block_data)
-
-            if self.debug:
-                print(f"Block {block_number}: {formatted_block_data}")
-
-        return all_data
 
     def read_config_page(self, page):
         if not (_CONFIG_PAGE_START <= page <= _CONFIG_PAGE_END):

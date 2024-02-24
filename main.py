@@ -1,8 +1,8 @@
 import os
 import RPi.GPIO as GPIO
 from helpers import authenticate_user, create_link, process_nfc_url
-from pn532 import PN532_SPI
-from ntag import NTAG213
+from pn532 import PN532_SPI as PN532
+from ntag import NTAG
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -33,9 +33,9 @@ def main():
         auth_url = os.getenv('PROD_AUTH_URL')
         api_url_base = os.getenv('PROD_API_URL_BASE')
 
-    pn532 = PN532_SPI(debug=env_debug, reset=20, cs=4)
+    pn532 = PN532(debug=env_debug, reset=20, cs=4)
     pn532.SAM_configuration()
-    ntag213 = NTAG213(pn532, debug=env_debug)
+    ntag = NTAG(pn532, debug=env_debug)
 
     token = authenticate_user(auth_url, username, password)
     uid_list = []
