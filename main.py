@@ -26,7 +26,7 @@ def main():
     password = os.getenv('PASSWORD')
     auth_url = os.getenv('AUTH_URL')
     api_url_base = os.getenv('API_URL_BASE')
-    env_debug = os.getenv('ENV_DEBUG') 
+    env_debug = os.getenv('DEBUG') 
 
     pn532 = PN532(debug=env_debug, reset=20, cs=4)
     pn532.SAM_configuration()
