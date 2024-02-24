@@ -1,6 +1,6 @@
 import os
 import RPi.GPIO as GPIO
-from helpers import authenticate_user, create_link, process_nfc_url
+from helpers import authenticate_user, create_link, process_ntag_url
 from pn532 import PN532_SPI as PN532
 from ntag import NTAG
 import logging
@@ -57,10 +57,10 @@ def main():
                     print(message2)
 
                     api_url = f'{api_url_base}{uid_str}/'
-                    nfc_url = create_link(api_url, token, uid_str)
+                    ntag_url = create_link(api_url, token, uid_str)
                     
-                    if nfc_url:
-                        stripped_url = process_nfc_url(ntag, nfc_url)
+                    if ntag_url:
+                        stripped_url = process_ntag_url(ntag, ntag_url)
                         record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)
                         ntag.write_ndef_message(record)
                     else:
