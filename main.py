@@ -24,9 +24,14 @@ def main():
 
     username = os.getenv('USERNAME')
     password = os.getenv('PASSWORD')
-    auth_url = os.getenv('AUTH_URL')
-    api_url_base = os.getenv('API_URL_BASE')
-    env_debug = os.getenv('DEBUG') 
+    env_debug = os.getenv('DEBUG')
+
+    if env_debug:
+        auth_url = os.getenv('DEV_AUTH_URL')
+        api_url_base = os.getenv('DEV_API_URL_BASE')
+    else:
+        auth_url = os.getenv('PROD_AUTH_URL')
+        api_url_base = os.getenv('PROD_API_URL_BASE')
 
     pn532 = PN532_SPI(debug=env_debug, reset=20, cs=4)
     pn532.SAM_configuration()
