@@ -60,9 +60,9 @@ def main():
                     nfc_url = create_link(api_url, token, uid_str)
                     
                     if nfc_url:
-                        stripped_url = process_nfc_url(ntag213, nfc_url)
-                        record = ntag213.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)
-                        ntag213.write_ndef_message(record)
+                        stripped_url = process_nfc_url(ntag, nfc_url)
+                        record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=stripped_url)
+                        ntag.write_ndef_message(record)
                     else:
                         message3 = "Failed to process NFC URL."
                         logging.info(message3)
