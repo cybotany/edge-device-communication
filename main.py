@@ -1,4 +1,5 @@
 import os
+import sys
 import RPi.GPIO as GPIO
 from helpers import authenticate_user, create_link, process_ntag_url
 from pn532 import PN532_SPI as PN532
@@ -28,10 +29,10 @@ def main():
 
     if env_debug:
         auth_url = os.getenv('DEV_AUTH_URL')
-        api_url_base = os.getenv('DEV_API_URL_BASE')
+        api_url = os.getenv('DEV_API_URL_BASE')
     else:
         auth_url = os.getenv('PROD_AUTH_URL')
-        api_url_base = os.getenv('PROD_API_URL_BASE')
+        api_url = os.getenv('PROD_API_URL_BASE')
 
     pn532 = PN532(debug=env_debug, reset=20, cs=4)
     pn532.SAM_configuration()
@@ -53,11 +54,14 @@ def main():
                 if uid_str not in uid_list:
                     uid_list.append(uid_str)
                     message2 = f'Found new card. Extracted UID: {uid_str}'
-                    logging.info(message2)
                     print(message2)
 
-                    api_url = f'{api_url_base}{uid_str}/'
-                    ntag_url = create_link(api_url, token, uid_str)
+                    ntag_type = 'NTAG_213'
+                    ntag_use = 'plant_label'
+                    if len(sys.argv) > 1:
+                        ntag_use = sys.argv[1]
+
+                    ntag_url = create_link(api_url, token, uid_str, ntag_type, ntag_use)
                     
                     if ntag_url:
                         stripped_url = process_ntag_url(ntag, ntag_url)
@@ -65,11 +69,9 @@ def main():
                         ntag.write_ndef_message(record)
                     else:
                         message3 = "Failed to process NFC URL."
-                        logging.info(message3)
                         print(message3)
                 else:
                     message4 = f'Found duplicate card. Extracted UID: {uid_str}'
-                    logging.info(message4)
                     print(message4)
     except Exception as e:
         logging.error(e)

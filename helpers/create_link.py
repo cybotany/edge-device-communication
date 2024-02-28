@@ -1,10 +1,15 @@
 import requests
 import logging
 
-def create_link(api_url, token, uid_str):
+def create_link(api_url, token, uid_str, ntag_type, ntag_use):
     try:
         headers = {'Authorization': f'Bearer {token}'}
-        response = requests.post(api_url, headers=headers, data={'serial_number': uid_str}, verify=True)
+        payload = {
+            'serial_number': uid_str,
+            'type': ntag_type,
+            'use': ntag_use
+        }
+        response = requests.post(api_url, headers=headers, json=payload, verify=True) 
         if response.status_code == 201:
             logging.info('Link created successfully in Django app.')
             print('Link created successfully in Django app.')
