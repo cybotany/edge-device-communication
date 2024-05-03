@@ -1,7 +1,8 @@
 import sys
 import RPi.GPIO as GPIO
-from helpers import authenticate_user, register_ntag
+
 from pn532 import PN532_SPI as PN532
+from helpers import authenticate_user, register_ntag
 from ntag import NTAG
 
 def main():
