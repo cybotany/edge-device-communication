@@ -1,18 +1,17 @@
+import os
 import requests
 
-def register_ntag(token, _serial_number, _type, _use):
-    url = 'https://digidex.app/api/ntags/'
+def register_ntag(token, uid):
+    api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
     payload = {
-        'serial_number': _serial_number,
-        'type': _type,
-        'use': _use
+        'serial_number': uid
     }
     try:
-        response = requests.post(url, headers=headers, json=payload, verify=True)
+        response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201:
             ntag_url = response.json().get('absolute_url')
-            print(f"NTAG: {_serial_number} registered successfully.")
+            print(f"NTAG: {uid} registered successfully.")
             return ntag_url
         else:
             print("Failed to register NTAG.")
