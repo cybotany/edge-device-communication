@@ -2,7 +2,7 @@ import requests
 import sys
 import os
 
-def authenticate_user(auth_url):
+def authenticate_user():
     username = os.getenv('USERNAME')
     password = os.getenv('PASSWORD')
     auth_url = os.getenv('AUTH_URL')
