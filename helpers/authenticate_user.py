@@ -13,4 +13,4 @@ def authenticate_user():
         else:
             sys.exit("Authentication failed, exiting program.")
     except requests.exceptions.RequestException as e:
-        sys.exit(f"Error during authentication request, exiting program.")
+        sys.exit(f"Error during authentication request, exiting program. Error was: {e}")
