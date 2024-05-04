@@ -48,7 +48,7 @@ def main():
     try:
         pn532 = PN532(debug=True, reset=20, cs=4)
         pn532.SAM_configuration()
-        #ntag = NTAG(pn532, debug=True)
+        ntag = NTAG(pn532, debug=True)
 
         token = authenticate_user()
         uid_list = []
@@ -65,8 +65,8 @@ def main():
                     ntag_url = register_ntag(token, uid)
                     if ntag_url:
                         print("NTAG URL routed on backend.")
-                    #    record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
-                    #    ntag.write_ndef_message(record)
+                        record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
+                        ntag.write_ndef_message(record)
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
     except Exception as e:
