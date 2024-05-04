@@ -23,18 +23,21 @@ def authenticate_user():
 def register_ntag(token, uid):
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
-    payload = {
-        'serial_number': uid
-    }
+    payload = {'serial_number': uid}
+    
     try:
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201:
-            ntag_url = response.json().get('absolute_url')
-            print(f"NTAG: {uid} registered successfully.")
+            ntag_url = response.json().get('ntag_url')
+            print(f"NTAG: {uid} registered successfully. URL: {ntag_url}")
+            return ntag_url
+        elif response.status_code == 200:
+            ntag_url = response.json().get('ntag_url')
+            print(f"NTAG: {uid} updated successfully. URL: {ntag_url}")
             return ntag_url
         else:
-            print("Failed to register NTAG.")
-        return None
+            print(f"Failed to register or update NTAG. Status code: {response.status_code}, Error: {response.text}")
+            return None
     except requests.exceptions.RequestException as e:
         print(f"Error communicating with NTAG API: {e}")
         return None
@@ -57,7 +60,6 @@ def main():
                 if uid not in uid_list:
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
-
                     ntag_url = register_ntag(token, uid)
                     if ntag_url:
                         print(ntag_url)
