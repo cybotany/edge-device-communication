@@ -20,6 +20,13 @@ def authenticate_user():
     except requests.exceptions.RequestException as e:
         sys.exit(f"Error during authentication request, exiting program. Error was: {e}")
 
+def clean_ntag_url(url):
+    if url.startswith('http://'):
+        return url[7:]
+    if url.startswith('https://'):
+        return url[8:]
+    return url
+
 def register_ntag(token, uid):
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
@@ -27,16 +34,12 @@ def register_ntag(token, uid):
     
     try:
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
-        if response.status_code == 201:
+        if response.status_code == 201 or response.status_code == 200:
             ntag_url = response.json().get('ntag_url')
+            clean_url = clean_ntag_url(ntag_url)
             print(f"NTAG: {uid} registered successfully.")
-            print(f"NTAG URL: {ntag_url}")
-            return ntag_url
-        elif response.status_code == 200:
-            ntag_url = response.json().get('ntag_url')
-            print(f"NTAG: {uid} registered successfully.")
-            print(f"NTAG URL: {ntag_url}")
-            return ntag_url
+            print(f"Clean NTAG URL: {clean_url}")
+            return clean_url
         else:
             print(f"Failed to register or update NTAG. Status code: {response.status_code}, Error: {response.text}")
             return None
@@ -64,7 +67,6 @@ def main():
                     print(f'Found new card. Extracted UID: {uid}')
                     ntag_url = register_ntag(token, uid)
                     if ntag_url:
-                        print("NTAG URL routed on backend.")
                         record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
                         ntag.write_ndef_message(record)
                 else:
