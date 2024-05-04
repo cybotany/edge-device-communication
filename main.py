@@ -29,11 +29,13 @@ def register_ntag(token, uid):
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201:
             ntag_url = response.json().get('ntag_url')
-            print(f"NTAG: {uid} registered successfully. URL: {ntag_url}")
+            print(f"NTAG: {uid} registered successfully.")
+            print(f"NTAG URL: {ntag_url}")
             return ntag_url
         elif response.status_code == 200:
             ntag_url = response.json().get('ntag_url')
-            print(f"NTAG: {uid} updated successfully. URL: {ntag_url}")
+            print(f"NTAG: {uid} registered successfully.")
+            print(f"NTAG URL: {ntag_url}")
             return ntag_url
         else:
             print(f"Failed to register or update NTAG. Status code: {response.status_code}, Error: {response.text}")
@@ -62,7 +64,7 @@ def main():
                     print(f'Found new card. Extracted UID: {uid}')
                     ntag_url = register_ntag(token, uid)
                     if ntag_url:
-                        print(ntag_url)
+                        print("NTAG URL routed on backend.")
                     #    record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
                     #    ntag.write_ndef_message(record)
                 else:
