@@ -1,8 +1,43 @@
+import os
+import sys
+import requests
+
 import RPi.GPIO as GPIO
 
 from pn532 import PN532_SPI as PN532
-from helpers import authenticate_user, register_ntag
 from ntag import NTAG
+
+def _authenticate_user():
+    username = os.getenv('USERNAME')
+    password = os.getenv('PASSWORD')
+    auth_url = os.getenv('AUTH_URL')
+    try:
+        response = requests.post(auth_url, data={'username': username, 'password': password})
+        if response.status_code == 200:
+            return response.json().get('access')
+        else:
+            sys.exit("Authentication failed, exiting program.")
+    except requests.exceptions.RequestException as e:
+        sys.exit(f"Error during authentication request, exiting program. Error was: {e}")
+
+def _register_ntag(token, uid):
+    api_url = os.getenv('API_URL')
+    headers = {'Authorization': f'Bearer {token}'}
+    payload = {
+        'serial_number': uid
+    }
+    try:
+        response = requests.post(api_url, headers=headers, json=payload, verify=True)
+        if response.status_code == 201:
+            ntag_url = response.json().get('absolute_url')
+            print(f"NTAG: {uid} registered successfully.")
+            return ntag_url
+        else:
+            print("Failed to register NTAG.")
+        return None
+    except requests.exceptions.RequestException as e:
+        print(f"Error communicating with NTAG API: {e}")
+        return None
 
 def main():
     try:
@@ -10,7 +45,7 @@ def main():
         pn532.SAM_configuration()
         ntag = NTAG(pn532, debug=True)
 
-        token = authenticate_user()
+        token = _authenticate_user()
         uid_list = []
         last_uid = None
         print('Waiting for an NFC card...')
@@ -23,7 +58,7 @@ def main():
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
 
-                    ntag_url = register_ntag(token, uid)
+                    ntag_url = _register_ntag(token, uid)
                     if ntag_url:
                         print(ntag_url)
                     #    record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
