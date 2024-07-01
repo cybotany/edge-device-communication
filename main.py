@@ -35,7 +35,7 @@ def register_ntag(token, uid):
     try:
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201 or response.status_code == 200:
-            ntag_url = response.json().get('ntag_url')
+            ntag_url = response.json().get('nfc_tag_url')
             clean_url = clean_ntag_url(ntag_url)
             print(f"NTAG: {uid} registered successfully.")
             print(f"Clean NTAG URL: {clean_url}")
