@@ -32,7 +32,7 @@ def register_ntag(token, uid):
     headers = {'Authorization': f'Bearer {token}'}
     payload = {
         'serial_number': uid,
-        'tag_form': 'RS'
+        'tag_form': 'DT'
     }
     
     try:
