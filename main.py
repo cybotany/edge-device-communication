@@ -31,15 +31,13 @@ def register_ntag(token, uid):
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
     payload = {
-        'serial_number': uid,
-        'tag_form': 'DT'
+        'serial_number': uid
     }
     
     try:
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201 or response.status_code == 200:
             uuid = response.json().get('uuid')
-            tag_form = response.json().get('tag_form')
             created_at = response.json().get('created_at')
             last_modified = response.json().get('last_modified')
             url = response.json().get('url')
