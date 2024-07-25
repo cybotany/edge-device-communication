@@ -27,11 +27,12 @@ def clean_ntag_url(url):
         return url[8:]
     return url
 
-def register_ntag(token, uid):
+def register_ntag(token, uid, user_id=1):
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
     payload = {
-        'serial_number': uid
+        'serial_number': uid,
+        'owner': user_id
     }
     
     try:
