@@ -20,6 +20,54 @@ class NTAG:
         self.memory[4] = [0x01, 0x03, 0xA0, 0x0C]
         self.memory[5] = [0x34, 0x03, 0x00, 0xFE]
 
+    def set_configurations(self):
+        """
+        Configures NTAG213 settings including ASCII mirror, memory protection, and password-related settings.
+        """
+        
+        # Block 3: Pre-programmed Capability Container
+        self.memory[3] = [0xE1, 0x10, 0x12, 0x00]  # Capability Container
+
+        # Block 4: NDEF Magic Number
+        self.memory[4] = [0x01, 0x03, 0xA0, 0x0C]  # NDEF Magic Number
+
+        # Block 5: Pre-programmed data
+        self.memory[5] = [0x34, 0x03, 0x00, 0xFE]  # Pre-programmed data
+        
+        # Block 41 Configuration
+        mirror_conf = 0b11 # MIRROR_CONF: Set to 11b to enable both UID and NFC counter ASCII mirror
+        mirror_byte = 0b01 # MIRROR_BYTE: Set to 01b to start mirroring at the 2nd byte of the page
+        strong_mod_en = 0b1 # STRG_MOD_EN: Set to 1b to enable strong modulation mode
+    
+        self.memory[41] = [
+            (mirror_conf << 6) | (mirror_byte << 4) | (strong_mod_en << 2),  # MIRROR_CONF, MIRROR_BYTE, STRG_MOD_EN
+            0x00,  # RFU (Reserved for Future Use)
+            0x0C,  # MIRROR_PAGE (Page 12)
+            0xFF   # AUTH0 (Password protection disabled)
+        ]
+        
+        # Block 42 Configuration
+        prot = 0b0 # PROT: Set to 0b to protect write access with password verification
+        cfglck = 0b0 # CFGLCK: Set to 0b to keep configuration open to write access
+        nfc_cnt_en = 0b1 # NFC_CNT_EN: Set to 1b to enable NFC counter
+        nfc_cnt_pwd_prot = 0b0 # NFC_CNT_PWD_PROT: Set to 0b to disable password protection for NFC counter
+        authlim = 0b000 # AUTHLIM: Set to 000b to disable limitation of negative password attempts
+        
+        self.memory[42] = [
+            (prot << 7) | (cfglck << 6) | (nfc_cnt_en << 4) | (nfc_cnt_pwd_prot << 3) | authlim,  # ACCESS byte
+            0x00,  # RFU (Reserved for Future Use)
+            0x00,  # RFU (Reserved for Future Use)
+            0x00   # RFU (Reserved for Future Use)
+        ]
+        
+        # Block 43 Configuration
+        pwd = [0xFF, 0xFF, 0xFF, 0xFF] # PWD: Set default password to FFFFFFFFh
+        self.memory[43] = pwd  # PWD (Password)
+        
+        # Block 44 Configuration
+        pack = [0x00, 0x00] # PACK: Set default password acknowledge (PACK) to 0000h
+        self.memory[44] = pack + [0x00, 0x00]  # PACK and RFU (Reserved for Future Use)
+
     def write_block(self, block_number, data):
         """
         Write a block of data to the card.

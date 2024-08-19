@@ -77,12 +77,17 @@ def main():
                     if ntag_url:
                         record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
                         ntag.write_ndef_message(record)
+                        
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
     except Exception as e:
         print(e)
     finally:
         GPIO.cleanup()
+
+if __name__ == '__main__':
+    main()
+
 
 if __name__ == '__main__':
     main()
