@@ -66,6 +66,7 @@ class NTAG:
 
         pack_bytes = [int(pack[i:i+2], 16) for i in range(0, len(pack), 2)]
         self.memory[44] = pack_bytes + [0x00, 0x00]
+        print(f"Password set successfully.")
         return True
         
     def write_block(self, block_number, data):
