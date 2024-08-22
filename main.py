@@ -1,6 +1,7 @@
 import os
 import sys
 import requests
+import uuid
 import RPi.GPIO as GPIO
 
 from pn532 import PN532_SPI as PN532
@@ -57,9 +58,10 @@ def main():
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
                     
-                    uuid = register_ntag(token, uid)
-                    if uuid:
-                        ntag_pwd = uuid.hex[:8]
+                    ntag_uuid = register_ntag(token, uid)
+                    if ntag_uuid:
+                        ntag_uuid = uuid.UUID(ntag_uuid)
+                        ntag_pwd = ntag_uuid.hex[:8]
                         ntag.set_password(ntag_pwd)
                         record = ntag.create_ndef_record(tnf=0x01, record_type='U')
                         ntag.write_ndef_message(ntag_pwd, record)
