@@ -39,7 +39,7 @@ class NTAG:
         ]
         return True
 
-    def set_password(self, password=None, password_acknowledge=None):
+    def set_password(self, password=None):
         if not password:
             raise ValueError("Password must be provided.")
         
@@ -56,16 +56,8 @@ class NTAG:
         # Write the password to Block 43 in the memory
         self.password = pwd_bytes
         self.memory[43] = self.password
-        if password_acknowledge:
-            # Password should be 4 characters long in hexadecimal (2 bytes)
-            if len(password_acknowledge) != 4 or not all(c in '0123456789ABCDEFabcdef' for c in password_acknowledge):
-                raise ValueError("Password must be 2 bytes long (4 hexadecimal characters).")
-            pack = password_acknowledge
-        else:
-            pack = [0x00, 0x00]
-        print(f"Password Acknowledge Value: {pack}")
-        pack_bytes = [int(pack[i:i+2], 16) for i in range(0, len(pack), 2)]
-        self.memory[44] = pack_bytes + [0x00, 0x00]
+        # Write empty password acknowledge to Block 44 in the memory
+        self.memory[44] = [0x00, 0x00, 0x00, 0x00]
         print(f"Password set successfully.")
         return True
         
