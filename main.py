@@ -27,13 +27,11 @@ def clean_ntag_url(url):
         return url[8:]
     return url
 
-# CHANGE DEFAULT USER ID TO YOUR USER ID
-def register_ntag(token, uid, user_id=3):
+def register_ntag(token, uid):
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
     payload = {
-        'serial_number': uid,
-        'owner': user_id
+        'serial_number': uid
     }
     
     try:
