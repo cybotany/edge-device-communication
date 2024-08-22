@@ -7,67 +7,74 @@ class NTAG:
         self.pn532 = pn532
         self.debug = debug
         self.memory = [[0x00 for _ in range(4)] for _ in range(45)]
-        self._initialize_memory()
+        self.password = None
+        self.set_initial_configurations()
 
-    def _initialize_memory(self):
+    def set_initial_configurations(self):
         """
-        Pre-programmed data as per NTAG213 specifications.
-        Block 3: Capability Container
-        Block 4: NDEF Magic Number
-        Block 5: Pre-programmed data
+        Set pre-programmed capabilities and NDEF magic number for NTAG213.
         """
         self.memory[3] = [0xE1, 0x10, 0x12, 0x00]
         self.memory[4] = [0x01, 0x03, 0xA0, 0x0C]
         self.memory[5] = [0x34, 0x03, 0x00, 0xFE]
 
-    def set_configurations(self):
-        """
-        Configures NTAG213 settings including ASCII mirror, memory protection, and password-related settings.
-        """
-        
-        # Block 3: Pre-programmed Capability Container
-        self.memory[3] = [0xE1, 0x10, 0x12, 0x00]  # Capability Container
-
-        # Block 4: NDEF Magic Number
-        self.memory[4] = [0x01, 0x03, 0xA0, 0x0C]  # NDEF Magic Number
-
-        # Block 5: Pre-programmed data
-        self.memory[5] = [0x34, 0x03, 0x00, 0xFE]  # Pre-programmed data
-        
-        # Block 41 Configuration
         mirror_conf = 0b11 # MIRROR_CONF: Set to 11b to enable both UID and NFC counter ASCII mirror
         mirror_byte = 0b01 # MIRROR_BYTE: Set to 01b to start mirroring at the 2nd byte of the page
         strong_mod_en = 0b1 # STRG_MOD_EN: Set to 1b to enable strong modulation mode
-    
         self.memory[41] = [
             (mirror_conf << 6) | (mirror_byte << 4) | (strong_mod_en << 2),  # MIRROR_CONF, MIRROR_BYTE, STRG_MOD_EN
             0x00,  # RFU (Reserved for Future Use)
-            0x0C,  # MIRROR_PAGE (Page 12)
+            0x0B,  # MIRROR_PAGE (Page 11)
             0xFF   # AUTH0 (Password protection disabled)
         ]
         
-        # Block 42 Configuration
         prot = 0b0 # PROT: Set to 0b to protect write access with password verification
         cfglck = 0b0 # CFGLCK: Set to 0b to keep configuration open to write access
         nfc_cnt_en = 0b1 # NFC_CNT_EN: Set to 1b to enable NFC counter
         nfc_cnt_pwd_prot = 0b0 # NFC_CNT_PWD_PROT: Set to 0b to disable password protection for NFC counter
         authlim = 0b000 # AUTHLIM: Set to 000b to disable limitation of negative password attempts
-        
         self.memory[42] = [
-            (prot << 7) | (cfglck << 6) | (nfc_cnt_en << 4) | (nfc_cnt_pwd_prot << 3) | authlim,  # ACCESS byte
-            0x00,  # RFU (Reserved for Future Use)
-            0x00,  # RFU (Reserved for Future Use)
-            0x00   # RFU (Reserved for Future Use)
+            (prot << 7) | (cfglck << 6) | (nfc_cnt_en << 4) | (nfc_cnt_pwd_prot << 3) | authlim,
+            0x00, 0x00, 0x00   # RFU (Reserved for Future Use)
         ]
-        
-        # Block 43 Configuration
-        pwd = [0xFF, 0xFF, 0xFF, 0xFF] # PWD: Set default password to FFFFFFFFh
-        self.memory[43] = pwd  # PWD (Password)
-        
-        # Block 44 Configuration
-        pack = [0x00, 0x00] # PACK: Set default password acknowledge (PACK) to 0000h
-        self.memory[44] = pack + [0x00, 0x00]  # PACK and RFU (Reserved for Future Use)
+        return True
 
+    def set_password(self, password=None, password_acknowledge=None):
+        if not password:
+            raise ValueError("Password must be provided.")
+        
+        # Password should be 8 characters long in hexadecimal (4 bytes)
+        if len(password) != 8 or not all(c in '0123456789ABCDEFabcdef' for c in password):
+            raise ValueError("Password must be 4 bytes long (8 hexadecimal characters).")
+        
+        # Convert the password to a byte array
+        pwd_bytes = [int(password[i:i+2], 16) for i in range(0, len(password), 2)]
+        
+        if self.debug:
+            print(f"Setting password: {password} (Bytes: {pwd_bytes})")
+
+        # Write the password to Block 43 in the memory
+        self.password = pwd_bytes
+        self.memory[43] = self.password
+        if password_acknowledge:
+            self.set_password_acknowledge(password_acknowledge)
+        else:
+            pack = [0x00, 0x00]
+            self.memory[44] = pack + [0x00, 0x00]
+        return True
+
+    def set_password_acknowledge(self, password_acknowledge):
+        if not password_acknowledge:
+            raise ValueError("Password acknowledge must be provided.")
+    
+        # Password should be 4 characters long in hexadecimal (2 bytes)
+        if len(password_acknowledge) != 4 or not all(c in '0123456789ABCDEFabcdef' for c in password_acknowledge):
+            raise ValueError("Password must be 2 bytes long (4 hexadecimal characters).")
+
+        # Block 44 Configuration
+        self.memory[44] = password_acknowledge + [0x00, 0x00]
+        return True
+        
     def write_block(self, block_number, data):
         """
         Write a block of data to the card.
@@ -158,10 +165,11 @@ class NTAG:
         tlv = b'\x34' + tlv_type + tlv_length + complete_record + b'\xFE'  # Append terminator
         return tlv
 
-    def create_ndef_record(self, tnf=0x01, record_type='T', payload='', id=''):
+    def create_ndef_record(self, tnf=0x01, record_type='T', id=''):
         """
         Method to create the NDEF record with debug statements.
         """
+        payload = 'digidex.tech/link?m='
         message_flags = self._create_message_flags(payload, id, tnf)
         prepared_payload = self._prepare_payload(record_type, payload)
         header = self._create_record_header(message_flags, record_type, prepared_payload, id)

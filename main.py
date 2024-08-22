@@ -1,7 +1,6 @@
 import os
 import sys
 import requests
-
 import RPi.GPIO as GPIO
 
 from pn532 import PN532_SPI as PN532
@@ -20,13 +19,6 @@ def authenticate_user():
     except requests.exceptions.RequestException as e:
         sys.exit(f"Error during authentication request, exiting program. Error was: {e}")
 
-def clean_ntag_url(url):
-    if url.startswith('http://'):
-        return url[7:]
-    if url.startswith('https://'):
-        return url[8:]
-    return url
-
 def register_ntag(token, uid):
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
@@ -38,14 +30,7 @@ def register_ntag(token, uid):
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201 or response.status_code == 200:
             uuid = response.json().get('uuid')
-            created_at = response.json().get('created_at')
-            last_modified = response.json().get('last_modified')
-            url = response.json().get('url')
-
-            clean_url = clean_ntag_url(url)
-            print(f"NTAG: {uid} registered successfully.")
-            print(f"Clean NTAG URL: {clean_url}")
-            return clean_url
+            return uuid
         else:
             print(f"Failed to register or update NTAG. Status code: {response.status_code}, Error: {response.text}")
             return None
@@ -71,10 +56,13 @@ def main():
                 if uid not in uid_list:
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
-                    ntag_url = register_ntag(token, uid)
-                    if ntag_url:
-                        record = ntag.create_ndef_record(tnf=0x01, record_type='U', payload=ntag_url)
-                        ntag.write_ndef_message(record)
+                    
+                    uuid = register_ntag(token, uid)
+                    if uuid:
+                        ntag_pwd = uuid.hex[:8]
+                        ntag.set_password(ntag_pwd)
+                        record = ntag.create_ndef_record(tnf=0x01, record_type='U')
+                        ntag.write_ndef_message(ntag_pwd, record)
                         
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
@@ -82,10 +70,6 @@ def main():
         print(e)
     finally:
         GPIO.cleanup()
-
-if __name__ == '__main__':
-    main()
-
 
 if __name__ == '__main__':
     main()
