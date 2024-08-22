@@ -57,10 +57,15 @@ class NTAG:
         self.password = pwd_bytes
         self.memory[43] = self.password
         if password_acknowledge:
-            self.set_password_acknowledge(password_acknowledge)
+            # Password should be 4 characters long in hexadecimal (2 bytes)
+            if len(password_acknowledge) != 4 or not all(c in '0123456789ABCDEFabcdef' for c in password_acknowledge):
+                raise ValueError("Password must be 2 bytes long (4 hexadecimal characters).")
+            pack = password_acknowledge
         else:
             pack = [0x00, 0x00]
-            self.memory[44] = pack + [0x00, 0x00]
+
+        pack_bytes = [int(pack[i:i+2], 16) for i in range(0, len(password_acknowledge), 2)]
+        self.memory[44] = pack_bytes + [0x00, 0x00]
         return True
 
     def set_password_acknowledge(self, password_acknowledge):
@@ -72,7 +77,6 @@ class NTAG:
             raise ValueError("Password must be 2 bytes long (4 hexadecimal characters).")
 
         # Block 44 Configuration
-        self.memory[44] = password_acknowledge + [0x00, 0x00]
         return True
         
     def write_block(self, block_number, data):
