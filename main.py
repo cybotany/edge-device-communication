@@ -63,8 +63,7 @@ def main():
                         ntag_uuid = uuid.UUID(ntag_uuid)
                         ntag_pwd = ntag_uuid.hex[:8]
                         ntag.set_password(ntag_pwd)
-                        record = ntag.create_ndef_record()
-                        ntag.write_ndef(record)
+                        ntag.write_ndef()
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
     except Exception as e:
