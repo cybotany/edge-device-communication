@@ -63,6 +63,28 @@ class NTAG:
         self.memory[44] = [0x00, 0x00, 0x00, 0x00]
         print(f"Password set successfully.")
         return True
+
+    def authenticate(self):
+        """
+        Authenticate with the NTAG using the stored password.
+        """
+        if not self.password:
+            raise ValueError("No password set for authentication.")
+
+        if self.debug:
+            print(f"Authenticating with password: {self.password}")
+
+        # Send the PWD_AUTH command to authenticate
+        params = [0x01, 0x1B] + self.password  # 0x1B is the PWD_AUTH command
+        response = self.pn532._call_function(params=params, response_length=2)
+
+        if response is None or response[0] != 0x00:
+            print(f"Failed to authenticate with NTAG. Response: {response}")
+            return False
+
+        if self.debug:
+            print("Authentication successful.")
+        return True
         
     def write_block(self, block_number, data):
         """
@@ -177,6 +199,10 @@ class NTAG:
         :param record: NDEF message as a byte array (can contain multiple records)
         :return: True if write is successful, False otherwise
         """
+        if not self.authenticate():
+            print("Authentication failed. Cannot write NDEF message.")
+            return False
+
         record = self.create_ndef_record()
         try:
             # Store the NDEF message in memory starting at block 5
