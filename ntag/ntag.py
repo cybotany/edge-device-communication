@@ -170,7 +170,7 @@ class NTAG:
         print(f"NDEF Record created successfully: {record}")
         return record
     
-    def write_ndef(self):
+    def write_ndef(self, start_block=5):
         """
         Store the NDEF message in memory and then write the entire memory to the NTAG213 tag.
 
@@ -181,17 +181,20 @@ class NTAG:
         try:
             # Store the NDEF message in memory starting at block 5
             ndef_length = len(record)
-            max_blocks = len(self.memory) - 5  # Maximum blocks available for NDEF
+            max_blocks = len(self.memory) - start_block  # Maximum blocks available for NDEF
 
             if ndef_length > max_blocks * 4:
                 raise ValueError("NDEF message is too long to fit in the available memory.")
 
+            start_block = 5
             for i in range(0, ndef_length, 4):
                 block_data = record[i:i + 4]
                 if len(block_data) < 4:
                     block_data += b'\x00' * (4 - len(block_data))
 
-                self.memory[5 + i // 4] = list(block_data)
+                if self.debug:
+                    print(f"Writing data to block {start_block + i // 4}: {block_data}")
+                self.memory[start_block + i // 4] = list(block_data)
 
             if self.debug:
                 print(f"NDEF message stored in memory starting at block {5}.")
