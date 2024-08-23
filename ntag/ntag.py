@@ -164,29 +164,40 @@ class NTAG:
         print("NDEF Record created successfully.")
         return record
     
-    def write_ndef_message(self, ndef_message, start_block=5):
+    def write_ndef(self, ndef_message):
         """
-        Write an NDEF message to an NTAG2XX NFC tag.
+        Store the NDEF message in memory and then write the entire memory to the NTAG213 tag.
 
         :param ndef_message: NDEF message as a byte array (can contain multiple records)
-        :param start_block: Starting block number to write the message
+        :param start_block: Starting block number to store the message in the memory
         :return: True if write is successful, False otherwise
         """
         try:
+            # Store the NDEF message in memory starting at the given block
             for i in range(0, len(ndef_message), 4):
                 block_data = ndef_message[i:i + 4]
                 if len(block_data) < 4:
                     block_data += b'\x00' * (4 - len(block_data))
 
-                if self.debug:
-                    print(f"Writing data to block {start_block + i // 4}: {block_data}")
-
-                self.write_block(start_block + i // 4, block_data)
+                self.memory[5 + i // 4] = list(block_data)
 
             if self.debug:
-                print("Successfully wrote NDEF message to the NFC tag.")
+                print(f"NDEF message stored in memory starting at block 5.")
+
+            for block_number in range(5, len(self.memory)):
+                block_data = self.memory[block_number]
+                if self.debug:
+                    print(f"Writing Block {block_number}: {block_data}")
+                success = self.write_block(block_number, block_data)
+                if not success:
+                    print(f"Failed to write block {block_number}.")
+                    return False
+
+            if self.debug:
+                print("Successfully wrote all configurations and NDEF message to the NFC tag.")
 
             return True
+
         except Exception as e:
             print("Error writing NDEF message to the tag:", e)
             return False
