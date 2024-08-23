@@ -161,7 +161,7 @@ class NTAG:
         """
         if not payload:
             payload = self.url
-        message_flags = self._create_message_flags(payload, id, self.tnf)
+        message_flags = self._create_message_flags(payload, self.tnf)
         prepared_payload = self._prepare_payload(self.record_type, payload)
         print(f"NDEF Payload Prepared: {prepared_payload}")
         header = self._create_record_header(message_flags, self.record_type, prepared_payload)
