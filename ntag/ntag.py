@@ -61,7 +61,8 @@ class NTAG:
         self.memory[43] = self.password
         # Write empty password acknowledge to Block 44 in the memory
         self.memory[44] = [0x00, 0x00, 0x00, 0x00]
-        print(f"Password set successfully.")
+        if self.debug:
+            print(f"Password set successfully.")
         return True
 
     def authenticate(self):
@@ -198,11 +199,14 @@ class NTAG:
             payload = self.url
         message_flags = self._create_message_flags(payload, self.tnf)
         prepared_payload = self._prepare_payload(self.record_type, payload)
-        print(f"NDEF Payload Prepared: {prepared_payload}")
+        if self.debug:
+            print(f"NDEF Payload Prepared: {prepared_payload}")
         header = self._create_record_header(message_flags, self.record_type, prepared_payload)
-        print(f"NDEF Record Header created: {header}")
+        if self.debug:
+            print(f"NDEF Record Header created: {header}")
         record = self._construct_complete_record(header, prepared_payload)
-        print(f"NDEF Record created successfully: {record}")
+        if self.debug:
+            print(f"NDEF Record created successfully: {record}")
         return record
     
     def write_ndef(self, start_block=5):
