@@ -158,10 +158,10 @@ class NTAG:
         payload = 'digidex.tech/link?m='
         message_flags = self._create_message_flags(payload, id, tnf)
         prepared_payload = self._prepare_payload(record_type, payload)
-        print("NDEF Payload Prepared.")
+        print(f"NDEF Payload Prepared: {prepared_payload}")
         header = self._create_record_header(message_flags, record_type, prepared_payload, id)
         record = self._construct_complete_record(header, prepared_payload)
-        print("NDEF Record created successfully.")
+        print(f"NDEF Record created successfully: {record}")
         return record
     
     def write_ndef(self, ndef_message):
