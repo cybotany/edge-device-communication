@@ -204,7 +204,6 @@ class NTAG:
                 success = self.write_block(block_number, block_data)
                 if not success:
                     print(f"Failed to write block {block_number}.")
-                    return False
 
             if self.debug:
                 print("Successfully wrote all configurations and NDEF message to the NFC tag.")
