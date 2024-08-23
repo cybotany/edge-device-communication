@@ -151,14 +151,15 @@ class NTAG:
         tlv = b'\x34' + tlv_type + tlv_length + complete_record + b'\xFE'  # Append terminator
         return tlv
 
-    def create_ndef_record(self, tnf=0x01, id=''):
+    def create_ndef_record(self):
         """
         Method to create the NDEF record with debug statements.
         """
         RECORD_TYPE = 'U'
+        TNF = 0x01
         PAYLOAD = 'digidex.tech/link?m='
     
-        message_flags = self._create_message_flags(PAYLOAD, id, tnf)
+        message_flags = self._create_message_flags(PAYLOAD, id, TNF)
         prepared_payload = self._prepare_payload(RECORD_TYPE, PAYLOAD)
         print(f"NDEF Payload Prepared: {prepared_payload}")
         header = self._create_record_header(message_flags, RECORD_TYPE, prepared_payload, id)
