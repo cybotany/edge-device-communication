@@ -74,12 +74,25 @@ class NTAG:
         if self.debug:
             print(f"Authenticating with password: {self.password}")
 
-        # Send the PWD_AUTH command to authenticate
-        params = [0x01, 0x1B] + self.password  # 0x1B is the PWD_AUTH command
+        # Construct the PWD_AUTH command (0x1B) with the password
+        params = bytearray([0x01, 0x1B] + self.password)  # 0x1B is the PWD_AUTH command
+
+        if self.debug:
+            print(f"Authentication params: {params}")
+
+        # Send the command to the NTAG
         response = self.pn532._call_function(params=params, response_length=2)
 
-        if response is None or response[0] != 0x00:
-            print(f"Failed to authenticate with NTAG. Response: {response}")
+        if self.debug:
+            print(f"Authentication response: {response}")
+
+        # Check the response
+        if response is None or len(response) < 2:
+            print("Failed to authenticate with NTAG. Response was None or too short.")
+            return False
+
+        if response[0] != 0x00:
+            print(f"Authentication failed with error code: {response[0]}")
             return False
 
         if self.debug:
