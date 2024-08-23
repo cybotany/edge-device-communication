@@ -21,10 +21,19 @@ def authenticate_user():
         sys.exit(f"Error during authentication request, exiting program. Error was: {e}")
 
 def register_ntag(token, uid):
+    """
+      "ID"         "Tag Type"
+        1	    "Plant Label (Indoor)"
+        2	    "Plant Label (Outdoor)"
+        5	    "Pet Tag (27mm)"
+        7	    "Pet Tag (30mm)"
+        8	    "Dry Inlay (38mm)"
+    """
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
     payload = {
-        'serial_number': uid
+        'serial_number': uid,
+        'tag_type_id': 1
     }
     
     try:
