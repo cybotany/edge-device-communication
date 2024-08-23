@@ -122,13 +122,13 @@ class NTAG:
 
         return all_data
 
-    def _create_message_flags(self, payload, id, tnf):
+    def _create_message_flags(self, payload, tnf):
         # Assuming 'only' position if there's a single record
         MB = 0x80  # Message Begin
         ME = 0x40  # Message End
         CF = 0x00  # Chunk Flag, not used for a single record
         SR = 0x10 if len(payload) < 256 else 0x00  # Short Record
-        IL = 0x08 if id else 0x00  # ID Length
+        IL = 0x00  # ID Length
         return MB | ME | CF | SR | IL | tnf
 
     def _prepare_payload(self, record_type, payload):
@@ -138,17 +138,13 @@ class NTAG:
             return uri_identifier_code + payload.encode()
         return payload.encode()
 
-    def _create_record_header(self, message_flags, record_type, payload, id):
+    def _create_record_header(self, message_flags, record_type, payload):
         # Verify that all inputs are correct
-        assert isinstance(record_type, str), "record_type must be a string"
-        assert isinstance(payload, bytes), "payload must be a bytes object"
-        assert isinstance(id, str) or id is None, "id must be a string or None"
-
         type_length = len(record_type).to_bytes(1, byteorder='big')
         payload_length = len(payload).to_bytes(1 if len(payload) < 256 else 4, byteorder='big')
-        id_length = len(id).to_bytes(1, byteorder='big') if id else b''
+        id_length = b''
         record_type_bytes = record_type.encode()
-        id_bytes = id.encode()
+        id_bytes = ''.encode()
         return bytes([message_flags]) + type_length + payload_length + id_length + record_type_bytes + id_bytes
 
     def _construct_complete_record(self, header, payload):
@@ -168,7 +164,7 @@ class NTAG:
         message_flags = self._create_message_flags(payload, id, self.tnf)
         prepared_payload = self._prepare_payload(self.record_type, payload)
         print(f"NDEF Payload Prepared: {prepared_payload}")
-        header = self._create_record_header(message_flags, self.record_type, prepared_payload, id)
+        header = self._create_record_header(message_flags, self.record_type, prepared_payload)
         print(f"NDEF Record Header created: {header}")
         record = self._construct_complete_record(header, prepared_payload)
         print(f"NDEF Record created successfully: {record}")
