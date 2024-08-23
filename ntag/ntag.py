@@ -212,9 +212,9 @@ class NTAG:
         :param record: NDEF message as a byte array (can contain multiple records)
         :return: True if write is successful, False otherwise
         """
-        if not self.authenticate():
-            print("Authentication failed. Cannot write NDEF message.")
-            return False
+        #if not self.authenticate():
+        #    print("Authentication failed. Cannot write NDEF message.")
+        #    return False
 
         record = self.create_ndef_record()
         try:
