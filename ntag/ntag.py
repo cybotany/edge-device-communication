@@ -28,7 +28,7 @@ class NTAG:
             (mirror_conf << 6) | (mirror_byte << 4) | (strong_mod_en << 2),  # MIRROR_CONF, MIRROR_BYTE, STRG_MOD_EN
             0x00,  # RFU (Reserved for Future Use)
             0x0C,  # MIRROR_PAGE (Page 11)
-            0xFF   # AUTH0 (Password protection disabled)
+            0x05   # AUTH0 (Password protection enabled from page 5)
         ]
         
         prot = 0b0 # PROT: Set to 0b to protect write access with password verification
