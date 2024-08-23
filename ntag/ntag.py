@@ -139,6 +139,11 @@ class NTAG:
         return payload.encode()
 
     def _create_record_header(self, message_flags, record_type, payload, id):
+        # Verify that all inputs are correct
+        assert isinstance(record_type, str), "record_type must be a string"
+        assert isinstance(payload, bytes), "payload must be a bytes object"
+        assert isinstance(id, str) or id is None, "id must be a string or None"
+
         type_length = len(record_type).to_bytes(1, byteorder='big')
         payload_length = len(payload).to_bytes(1 if len(payload) < 256 else 4, byteorder='big')
         id_length = len(id).to_bytes(1, byteorder='big') if id else b''
