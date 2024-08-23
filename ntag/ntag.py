@@ -8,6 +8,9 @@ class NTAG:
         self.debug = debug
         self.memory = [[0x00 for _ in range(4)] for _ in range(45)]
         self.password = None
+        self.record_type = 'U'
+        self.tnf = 0x01
+        self.url = 'digidex.tech/link?m='
         self.set_initial_configurations()
 
     def set_initial_configurations(self):
@@ -151,18 +154,16 @@ class NTAG:
         tlv = b'\x34' + tlv_type + tlv_length + complete_record + b'\xFE'  # Append terminator
         return tlv
 
-    def create_ndef_record(self):
+    def create_ndef_record(self, payload=None):
         """
         Method to create the NDEF record with debug statements.
         """
-        RECORD_TYPE = 'U'
-        TNF = 0x01
-        PAYLOAD = 'digidex.tech/link?m='
-    
-        message_flags = self._create_message_flags(PAYLOAD, id, TNF)
-        prepared_payload = self._prepare_payload(RECORD_TYPE, PAYLOAD)
+        if not payload:
+            payload = self.url
+        message_flags = self._create_message_flags(payload, id, self.tnf)
+        prepared_payload = self._prepare_payload(self.record_type, payload)
         print(f"NDEF Payload Prepared: {prepared_payload}")
-        header = self._create_record_header(message_flags, RECORD_TYPE, prepared_payload, id)
+        header = self._create_record_header(message_flags, self.record_type, prepared_payload, id)
         record = self._construct_complete_record(header, prepared_payload)
         print(f"NDEF Record created successfully: {record}")
         return record
