@@ -22,12 +22,12 @@ class NTAG:
         self.memory[5] = [0x34, 0x03, 0x00, 0xFE]
 
         mirror_conf = 0b11 # MIRROR_CONF: Set to 11b to enable both UID and NFC counter ASCII mirror
-        mirror_byte = 0b01 # MIRROR_BYTE: Set to 01b to start mirroring at the 2nd byte of the page
+        mirror_byte = 0b10 # MIRROR_BYTE: Set to 01b to start mirroring at the 2nd byte of the page
         strong_mod_en = 0b1 # STRG_MOD_EN: Set to 1b to enable strong modulation mode
         self.memory[41] = [
             (mirror_conf << 6) | (mirror_byte << 4) | (strong_mod_en << 2),  # MIRROR_CONF, MIRROR_BYTE, STRG_MOD_EN
             0x00,  # RFU (Reserved for Future Use)
-            0x0B,  # MIRROR_PAGE (Page 11)
+            0x0C,  # MIRROR_PAGE (Page 11)
             0xFF   # AUTH0 (Password protection disabled)
         ]
         
