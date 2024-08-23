@@ -131,7 +131,7 @@ class NTAG:
     def _prepare_payload(self, record_type, payload):
         if record_type == 'U':
             # Choose the URI identifier code based on the debug flag
-            uri_identifier_code = b'\x04' # b'\x03' if self.debug else b'\x04'
+            uri_identifier_code = b'\x04' 
             return uri_identifier_code + payload.encode()
         return payload.encode()
 
@@ -151,15 +151,17 @@ class NTAG:
         tlv = b'\x34' + tlv_type + tlv_length + complete_record + b'\xFE'  # Append terminator
         return tlv
 
-    def create_ndef_record(self, tnf=0x01, record_type='T', id=''):
+    def create_ndef_record(self, tnf=0x01, id=''):
         """
         Method to create the NDEF record with debug statements.
         """
-        payload = 'digidex.tech/link?m='
-        message_flags = self._create_message_flags(payload, id, tnf)
-        prepared_payload = self._prepare_payload(record_type, payload)
+        RECORD_TYPE = 'U'
+        PAYLOAD = 'digidex.tech/link?m='
+    
+        message_flags = self._create_message_flags(PAYLOAD, id, tnf)
+        prepared_payload = self._prepare_payload(RECORD_TYPE, PAYLOAD)
         print(f"NDEF Payload Prepared: {prepared_payload}")
-        header = self._create_record_header(message_flags, record_type, prepared_payload, id)
+        header = self._create_record_header(message_flags, RECORD_TYPE, prepared_payload, id)
         record = self._construct_complete_record(header, prepared_payload)
         print(f"NDEF Record created successfully: {record}")
         return record
