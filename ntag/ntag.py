@@ -173,7 +173,7 @@ class NTAG:
         :return: True if write is successful, False otherwise
         """
         try:
-            # Store the NDEF message in memory starting at the given block
+            # Store the NDEF message in memory starting at block 5
             for i in range(0, len(ndef_message), 4):
                 block_data = ndef_message[i:i + 4]
                 if len(block_data) < 4:
@@ -184,7 +184,7 @@ class NTAG:
             if self.debug:
                 print(f"NDEF message stored in memory starting at block 5.")
 
-            for block_number in range(5, len(self.memory)):
+            for block_number in range(3, len(self.memory)):
                 block_data = self.memory[block_number]
                 if self.debug:
                     print(f"Writing Block {block_number}: {block_data}")
