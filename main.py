@@ -53,7 +53,7 @@ def main():
             serial_number = pn532.list_passive_target(timeout=0.5)
             if serial_number and serial_number != last_uid:
                 last_uid = serial_number
-                uid = ':'.join(['{:02X}'.format(i) for i in serial_number])
+                uid = ''.join(['{:02X}'.format(i) for i in serial_number])
                 if uid not in uid_list:
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
