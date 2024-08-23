@@ -72,7 +72,11 @@ def main():
                         ntag_uuid = uuid.UUID(ntag_uuid)
                         ntag_pwd = ntag_uuid.hex[:8]
                         ntag.set_password(ntag_pwd)
-                        ntag.write_ndef()
+                        success = ntag.write_ndef()
+                        if success:
+                            print(f'Wrote NDEF message to NTAG. Password: {ntag_pwd}')
+                        else:
+                            print('Failed to write NDEF message to NTAG.')
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
     except Exception as e:
