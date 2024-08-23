@@ -164,6 +164,7 @@ class NTAG:
         prepared_payload = self._prepare_payload(self.record_type, payload)
         print(f"NDEF Payload Prepared: {prepared_payload}")
         header = self._create_record_header(message_flags, self.record_type, prepared_payload, id)
+        print(f"NDEF Record Header created: {header}")
         record = self._construct_complete_record(header, prepared_payload)
         print(f"NDEF Record created successfully: {record}")
         return record
