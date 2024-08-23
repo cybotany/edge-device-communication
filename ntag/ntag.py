@@ -172,8 +172,14 @@ class NTAG:
         :return: True if write is successful, False otherwise
         """
         try:
-            # Store the NDEF message in memory starting at the given block
-            for i in range(0, len(ndef_message), 4):
+            # Store the NDEF message in memory starting at block 5
+            ndef_length = len(ndef_message)
+            max_blocks = len(self.memory) - 5  # Maximum blocks available for NDEF
+
+            if ndef_length > max_blocks * 4:
+                raise ValueError("NDEF message is too long to fit in the available memory.")
+
+            for i in range(0, ndef_length, 4):
                 block_data = ndef_message[i:i + 4]
                 if len(block_data) < 4:
                     block_data += b'\x00' * (4 - len(block_data))
