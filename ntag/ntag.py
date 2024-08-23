@@ -170,7 +170,7 @@ class NTAG:
         print(f"NDEF Record created successfully: {record}")
         return record
     
-    def write_ndef(self, record):
+    def write_ndef(self):
         """
         Store the NDEF message in memory and then write the entire memory to the NTAG213 tag.
 
