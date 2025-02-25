@@ -243,16 +243,16 @@ class NTAG:
                 print(f"NDEF message stored in memory starting at block {5}.")
 
             # Write the entire memory from block 3 onwards to the NTAG213 tag
-            for block_number in range(3, len(self.memory)):
-                block_data = self.memory[block_number]
-                if self.debug:
-                    print(f"Writing Block {block_number}: {block_data}")
-                success = self.write_block(block_number, block_data)
-                if not success:
-                    print(f"Failed to write block {block_number}.")
+            # for block_number in range(3, len(self.memory)):
+            #     block_data = self.memory[block_number]
+            #     if self.debug:
+            #         print(f"Writing Block {block_number}: {block_data}")
+            #     success = self.write_block(block_number, block_data)
+            #     if not success:
+            #         print(f"Failed to write block {block_number}.")
 
-            if self.debug:
-                print("Successfully wrote all configurations and NDEF message to the NFC tag.")
+            # if self.debug:
+            #     print("Successfully wrote all configurations and NDEF message to the NFC tag.")
 
             return True
 
