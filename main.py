@@ -1,7 +1,6 @@
 import os
 import sys
 import requests
-import uuid
 import RPi.GPIO as GPIO
 
 from pn532 import PN532_SPI as PN532
@@ -40,7 +39,7 @@ def main():
     try:
         pn532 = PN532(debug=True, reset=20, cs=4)
         pn532.SAM_configuration()
-        ntag = NTAG(pn532, debug=False)
+        ntag = NTAG(pn532, debug=True)
 
         token = authenticate_user()
         uid_list = []
