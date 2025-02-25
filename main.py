@@ -12,7 +12,7 @@ def authenticate_user():
     password = os.getenv('PASSWORD')
     auth_url = os.getenv('AUTH_URL')
     try:
-        response = requests.post(auth_url, data={'email': email, 'password': password})
+        response = requests.post(auth_url, json={'email': email, 'password': password})
         if response.status_code == 200:
             return response.json().get('access')
         else:
