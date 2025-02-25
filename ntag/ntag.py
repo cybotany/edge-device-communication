@@ -10,7 +10,7 @@ class NTAG:
         self.password = None
         self.record_type = 'U'
         self.tnf = 0x01
-        self.url = 'digidex.tech/link?m=00000000000000x000000'
+        self.url = 'digidex.tech/link/?m=00000000000000x000000'
         self.set_initial_configurations()
 
     def set_initial_configurations(self):

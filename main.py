@@ -21,20 +21,9 @@ def authenticate_user():
         sys.exit(f"Error during authentication request, exiting program. Error was: {e}")
 
 def register_ntag(token, uid):
-    """
-      "ID"         "Tag Type"
-        1	    "Plant Label (Indoor)"
-        2	    "Plant Label (Outdoor)"
-        5	    "Pet Tag (27mm)"
-        7	    "Pet Tag (30mm)"
-        8	    "Dry Inlay (38mm)"
-    """
     api_url = os.getenv('API_URL')
     headers = {'Authorization': f'Bearer {token}'}
-    payload = {
-        'serial_number': uid,
-        'tag_type_id': 1
-    }
+    payload = {'uid': uid}
     
     try:
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
@@ -59,10 +48,10 @@ def main():
         last_uid = None
         print('Waiting for an NFC card...')
         while True:
-            serial_number = pn532.list_passive_target(timeout=0.5)
-            if serial_number and serial_number != last_uid:
-                last_uid = serial_number
-                uid = ''.join(['{:02X}'.format(i) for i in serial_number])
+            uid = pn532.list_passive_target(timeout=0.5)
+            if uid and uid != last_uid:
+                last_uid = uid
+                uid = ''.join(['{:02X}'.format(i) for i in uid])
                 if uid not in uid_list:
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
@@ -71,7 +60,7 @@ def main():
                     if ntag_uuid:
                         ntag_uuid = uuid.UUID(ntag_uuid)
                         ntag_pwd = ntag_uuid.hex[:8]
-                        ntag.set_password(ntag_pwd)
+                        # ntag.set_password(ntag_pwd)
                         success = ntag.write_ndef()
                         if success:
                             print(f'Wrote NDEF message to NTAG. Password: {ntag_pwd}')
