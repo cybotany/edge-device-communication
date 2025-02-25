@@ -28,11 +28,10 @@ def register_ntag(token, uid):
     try:
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201 or response.status_code == 200:
-            uuid = response.json().get('uuid')
-            return uuid
+            return
         else:
             print(f"Failed to register or update NTAG. Status code: {response.status_code}, Error: {response.text}")
-            return None
+
     except requests.exceptions.RequestException as e:
         print(f"Error communicating with NTAG API: {e}")
         return None
@@ -56,16 +55,12 @@ def main():
                     uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
                     
-                    ntag_uuid = register_ntag(token, uid)
-                    if ntag_uuid:
-                        ntag_uuid = uuid.UUID(ntag_uuid)
-                        ntag_pwd = ntag_uuid.hex[:8]
-                        # ntag.set_password(ntag_pwd)
-                        success = ntag.write_ndef()
-                        if success:
-                            print(f'Wrote NDEF message to NTAG. Password: {ntag_pwd}')
-                        else:
-                            print('Failed to write NDEF message to NTAG.')
+                    register_ntag(token, uid)
+                    success = ntag.write_ndef()
+                    if success:
+                        print(f'Wrote NDEF message to NTAG.')
+                    else:
+                        print('Failed to write NDEF message to NTAG.')
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
     except Exception as e:
