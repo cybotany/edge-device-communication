@@ -8,11 +8,11 @@ from pn532 import PN532_SPI as PN532
 from ntag import NTAG
 
 def authenticate_user():
-    username = os.getenv('USERNAME')
+    email = os.getenv('EMAIL')
     password = os.getenv('PASSWORD')
     auth_url = os.getenv('AUTH_URL')
     try:
-        response = requests.post(auth_url, data={'username': username, 'password': password})
+        response = requests.post(auth_url, data={'email': email, 'password': password})
         if response.status_code == 200:
             return response.json().get('access')
         else:
