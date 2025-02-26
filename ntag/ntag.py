@@ -222,11 +222,6 @@ class NTAG:
             start_block = 5
             for i in range(0, ndef_length, 4):
                 block_data = record[i:i + 4]
-                if len(block_data) < 4:
-                    block_data += b'\x00' * (4 - len(block_data))
-
-                if self.debug:
-                    print(f"Writing data to block {start_block + i // 4}: {block_data}")
                 self.memory[start_block + i // 4] = list(block_data)
 
             if self.debug:
