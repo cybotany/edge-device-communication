@@ -23,7 +23,9 @@ class NTAG:
         self.mirror_page = 0x0C  # What page the mirror starts
         self.auth0 = 0x05        # Password protection enabled from this page
         self.rfu = 0x00              # RFU (Reserved for Future Use)
-        self.payload = 'digidex.tech/links/?m=00000000000000x00000'
+        self.url = 'digidex.tech/links/?m='
+        self.identifier = '00000000000000x00000'
+        self.payload = self.url + self.identifier
         self._set_initial_configurations()
 
     def _set_initial_configurations(self):
