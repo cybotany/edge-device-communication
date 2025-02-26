@@ -166,23 +166,36 @@ class NTAG:
     def write_ndef(self, start_block=5):
         record = self.create_ndef_record()
         try:
-            for i in range(0, len(record), 4):
+            # Store the NDEF message in memory starting at block 5
+            ndef_length = len(record)
+            max_blocks = len(self.memory) - start_block  # Maximum blocks available for NDEF
+
+            if ndef_length > max_blocks * 4:
+                raise ValueError("NDEF message is too long to fit in the available memory.")
+
+            start_block = 5
+            for i in range(0, ndef_length, 4):
                 block_data = record[i:i + 4]
                 if len(block_data) < 4:
                     block_data += b'\x00' * (4 - len(block_data))
-
-                if self.debug:
-                    print(f"Writing data to block {start_block + i // 4}: {block_data}")
-
-                self.write_block(start_block + i // 4, block_data)
+                self.memory[start_block + i // 4] = list(block_data)
 
             if self.debug:
-                print("Successfully wrote NDEF message to the NFC tag.")
+                print(f"NDEF message stored in memory starting at block {5}.")
+
+            # Write the entire memory from block 3 onwards to the NTAG213 tag
+            for block_number in range(3, len(self.memory)):
+                block_data = self.memory[block_number]
+                if self.debug:
+                    print(f"Writing Block {block_number}: {block_data}")
+                success = self.write_block(block_number, block_data)
+                if not success:
+                    print(f"Failed to write block {block_number}.")
+
+            if self.debug:
+                print("Successfully wrote all configurations and NDEF message to the NFC tag.")
 
             return True
-        except Exception as e:
-            print("Error writing NDEF message to the tag:", e)
-            return False
 
         except Exception as e:
             print("Error writing NDEF message to the tag:", e)
