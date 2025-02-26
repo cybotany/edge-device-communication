@@ -122,9 +122,20 @@ class NTAG:
 
     def _prepare_payload(self, record_type, payload):
         if record_type == 'U':
-            # Choose the URI identifier code based on the debug flag
-            uri_identifier_code = b'\x04' 
-            return uri_identifier_code + payload.encode()
+            # Start with the URI identifier code (e.g. 0x04 for "https://")
+            uri_identifier_code = b'\x04'
+            base_payload = uri_identifier_code + payload.encode()
+            # If both UID and ASCII mirror are enabled, pad the payload so that
+            # the complete record (header + payload) becomes 47 bytes.
+            # Since the header is 4 bytes (as constructed in _create_record_header),
+            # the payload should be exactly 43 bytes.
+            if self.mirror_conf == 0b11:
+                desired_payload_length = 43  # 47 total record bytes minus 4 header bytes
+                if len(base_payload) < desired_payload_length:
+                    padding_needed = desired_payload_length - len(base_payload)
+                    # Pad with ASCII "0" (0x30) so that when the TLV is built the terminator falls correctly
+                    base_payload += b'0' * padding_needed
+            return base_payload
         return payload.encode()
 
     def _create_record_header(self, message_flags, record_type, payload):
