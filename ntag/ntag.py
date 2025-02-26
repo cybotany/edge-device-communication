@@ -29,7 +29,7 @@ class NTAG:
         self.nfc_cnt_pwd_prot = 0b0  # Disable password protection for NFC counter
         self.authlim = 0b000         # No limitation on negative password attempts
         self.rfu = 0x00              # RFU (Reserved for Future Use)
-        self.url = 'digidex.tech/links/?m='
+        self.url = 'digidex.tech/links/'
         self._set_initial_configurations()
 
     def _set_initial_configurations(self):
