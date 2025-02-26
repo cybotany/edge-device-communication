@@ -4,7 +4,6 @@ class NTAG:
         Initialize the NTAG instance.
 
         Args:
-            pn532: An instance responsible for NFC communication.
             debug (bool): Flag to enable debug output.
         """
         self.debug = debug
@@ -93,19 +92,9 @@ class NTAG:
         Create and return the NDEF record.
         """ 
         message_flags = self._create_message_flags(self.payload)
-
         prepared_payload = self._prepare_payload(self.payload)
-        if self.debug:
-            print(f"NDEF Payload Prepared: {prepared_payload}")
-
         header = self._create_record_header(message_flags, prepared_payload)
-        if self.debug:
-            print(f"NDEF Record Header created: {header}")
-
         record = self._construct_complete_record(header, prepared_payload)
-        if self.debug:
-            print(f"NDEF Record created successfully: {record}")
-
         return record
     
     def write_ndef(self, start_block=5):
