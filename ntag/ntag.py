@@ -17,10 +17,10 @@ class NTAG:
         self.record_type = 'U'
         self.tnf = 0x01
         # Configure mirror and modulation settings
-        self.mirror_conf = 0b00  # Enable both UID and NFC counter ASCII mirror
-        self.mirror_byte = 0b00  # Start mirroring at the 1st byte of the page
+        self.mirror_conf = 0b11  # Enable both UID and NFC counter ASCII mirror
+        self.mirror_byte = 0b10  # Start mirroring at the 1st byte of the page
         self.strong_mod_en = 0b1 # Enable strong modulation mode
-        self.mirror_page = 0b00  # What page the mirror starts
+        self.mirror_page = 0x0C  # What page the mirror starts
         self.auth0 = 0x05        # Password protection enabled from this page
         # Configure protection and NFC counter settings
         self.prot = 0b0              # Write access not protected (password verification disabled)
@@ -29,7 +29,7 @@ class NTAG:
         self.nfc_cnt_pwd_prot = 0b0  # Disable password protection for NFC counter
         self.authlim = 0b000         # No limitation on negative password attempts
         self.rfu = 0x00              # RFU (Reserved for Future Use)
-        self.url = 'digidex.tech/links/?m='
+        self.url = 'digidex.tech/links/?m=00000000000000x000000'
         self._set_initial_configurations()
 
     def _set_initial_configurations(self):
@@ -176,6 +176,8 @@ class NTAG:
             start_block = 5
             for i in range(0, ndef_length, 4):
                 block_data = record[i:i + 4]
+                if len(block_data) < 4:
+                    block_data += b'\x00' * (4 - len(block_data))
                 self.memory[start_block + i // 4] = list(block_data)
 
             if self.debug:
