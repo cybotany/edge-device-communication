@@ -59,7 +59,7 @@ def main():
                     print(f'Found new card. Extracted UID: {uid}')
                     uid_list.append(uid)                   
                     ntag_uuid = register_ntag(token, uid)
-                    ntag = NTAG(pn532, debug=True)
+                    ntag = NTAG(debug=True)
                     ntag.identifier = ntag_uuid
                     success = ntag.write_ndef()
                     if success:
