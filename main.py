@@ -53,9 +53,8 @@ def main():
                 last_uid = uid
                 uid = ''.join(['{:02X}'.format(i) for i in uid])
                 if uid not in uid_list:
-                    uid_list.append(uid)
                     print(f'Found new card. Extracted UID: {uid}')
-                    
+                    uid_list.append(uid)                   
                     register_ntag(token, uid)
                     success = ntag.write_ndef()
                     if success:

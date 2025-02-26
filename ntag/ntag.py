@@ -23,7 +23,7 @@ class NTAG:
         self.mirror_page = 0x0C  # What page the mirror starts
         self.auth0 = 0x05        # Password protection enabled from this page
         self.rfu = 0x00              # RFU (Reserved for Future Use)
-        self.url = 'digidex.tech/links/?m=00000000000000x00000'
+        self.payload = 'digidex.tech/links/?m=00000000000000x00000'
         self._set_initial_configurations()
 
     def _set_initial_configurations(self):
@@ -99,28 +99,27 @@ class NTAG:
 
         return all_data
 
-    def _create_message_flags(self, payload, tnf):
+    def _create_message_flags(self, payload):
         # Assuming 'only' position if there's a single record
         MB = 0x80  # Message Begin
         ME = 0x40  # Message End
         CF = 0x00  # Chunk Flag, not used for a single record
         SR = 0x10 if len(payload) < 256 else 0x00  # Short Record
         IL = 0x00  # ID Length
-        return MB | ME | CF | SR | IL | tnf
+        return MB | ME | CF | SR | IL | self.tnf
 
-    def _prepare_payload(self, record_type, payload):
-        if record_type == 'U':
-            # Choose the URI identifier code based on the debug flag
+    def _prepare_payload(self, payload):
+        if self.record_type == 'U':
             uri_identifier_code = b'\x04' 
             return uri_identifier_code + payload.encode()
         return payload.encode()
 
-    def _create_record_header(self, message_flags, record_type, payload):
+    def _create_record_header(self, message_flags, payload):
         # Verify that all inputs are correct
-        type_length = len(record_type).to_bytes(1, byteorder='big')
+        type_length = len(self.record_type).to_bytes(1, byteorder='big')
         payload_length = len(payload).to_bytes(1 if len(payload) < 256 else 4, byteorder='big')
         id_length = b''
-        record_type_bytes = record_type.encode()
+        record_type_bytes = self.record_type.encode()
         id_bytes = ''.encode()
         return bytes([message_flags]) + type_length + payload_length + id_length + record_type_bytes + id_bytes
 
@@ -132,23 +131,24 @@ class NTAG:
         tlv = b'\x34' + tlv_type + tlv_length + complete_record + b'\xFE'  # Append terminator
         return tlv
 
-    def create_ndef_record(self, payload=None, id=''):
+    def create_ndef_record(self):
         """
         Method to create the NDEF record with debug statements.
-        """
-        if not payload:
-            payload = self.url
-            
-        message_flags = self._create_message_flags(payload, self.tnf)
-        prepared_payload = self._prepare_payload(self.record_type, payload)
+        """ 
+        message_flags = self._create_message_flags(self.payload)
+
+        prepared_payload = self._prepare_payload(self.payload)
         if self.debug:
             print(f"NDEF Payload Prepared: {prepared_payload}")
-        header = self._create_record_header(message_flags, self.record_type, prepared_payload)
+
+        header = self._create_record_header(message_flags, prepared_payload)
         if self.debug:
             print(f"NDEF Record Header created: {header}")
+
         record = self._construct_complete_record(header, prepared_payload)
         if self.debug:
             print(f"NDEF Record created successfully: {record}")
+
         return record
     
     def write_ndef(self, start_block=5):
@@ -167,9 +167,6 @@ class NTAG:
                 if len(block_data) < 4:
                     block_data += b'\x00' * (4 - len(block_data))
                 self.memory[start_block + i // 4] = list(block_data)
-
-            if self.debug:
-                print(f"NDEF message stored in memory starting at block {5}.")
 
             # Write the entire memory from block 3 onwards to the NTAG213 tag
             for block_number in range(3, len(self.memory)):
