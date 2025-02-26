@@ -10,7 +10,6 @@ class NTAG:
         self.password = None
         self.record_type = 'U'
         self.tnf = 0x01
-        self.url = 'digidex.tech/link?m=00000000000000x000000'
         self.set_initial_configurations()
 
     def set_initial_configurations(self):
@@ -195,8 +194,6 @@ class NTAG:
         """
         Method to create the NDEF record with debug statements.
         """
-        if not payload:
-            payload = self.url
         message_flags = self._create_message_flags(payload, self.tnf)
         prepared_payload = self._prepare_payload(self.record_type, payload)
         if self.debug:
@@ -209,7 +206,7 @@ class NTAG:
             print(f"NDEF Record created successfully: {record}")
         return record
     
-    def write_ndef(self, start_block=5):
+    def write_ndef(self, start_block=5, payload=None):
         """
         Store the NDEF message in memory and then write the entire memory to the NTAG213 tag.
 
@@ -219,8 +216,10 @@ class NTAG:
         #if not self.authenticate():
         #    print("Authentication failed. Cannot write NDEF message.")
         #    return False
+        if not payload:
+            return False
 
-        record = self.create_ndef_record()
+        record = self.create_ndef_record(payload)
         try:
             # Store the NDEF message in memory starting at block 5
             ndef_length = len(record)
@@ -250,9 +249,6 @@ class NTAG:
                 success = self.write_block(block_number, block_data)
                 if not success:
                     print(f"Failed to write block {block_number}.")
-
-            if self.debug:
-                print("Successfully wrote all configurations and NDEF message to the NFC tag.")
 
             return True
 

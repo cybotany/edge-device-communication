@@ -40,6 +40,10 @@ def register_ntag(token, uid):
         print(f"Error communicating with NTAG API: {e}")
         return None
 
+def build_ntag_url(ntag_uuid):
+    link_url = os.getenv('LINK_URL')
+    return f"{link_url}/?m={ntag_uuid}"
+
 def main():
     try:
         pn532 = PN532(debug=True, reset=20, cs=4)
@@ -63,10 +67,14 @@ def main():
                     ntag_uuid = register_ntag(token, uid)
                     if ntag_uuid:
                         ntag_uuid = uuid.UUID(ntag_uuid)
-                        ntag_pwd = ntag_uuid.hex[:8]
+                        payload = build_ntag_url(ntag_uuid)
+                        ntag.write_ndef(payload)
+                        print(f'Wrote NDEF message to NTAG with payload: {payload}')
+                        # ntag_pwd = ntag_uuid.hex[:8]
+                        # ntag.set_password(ntag_pwd)
                         success = ntag.write_ndef()
                         if success:
-                            print(f'Wrote NDEF message to NTAG. Password: {ntag_pwd}')
+                            print('Wrote NDEF message to NTAG.')
                         else:
                             print('Failed to write NDEF message to NTAG.')
                 else:
