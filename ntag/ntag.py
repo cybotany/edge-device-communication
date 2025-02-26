@@ -22,7 +22,7 @@ class NTAG:
         self.memory[5] = [0x34, 0x03, 0x00, 0xFE]
 
         mirror_conf = 0b11 # MIRROR_CONF: Set to 11b to enable both UID and NFC counter ASCII mirror
-        mirror_byte = 0b00 # MIRROR_BYTE: Set to 01b to start mirroring at the 2nd byte of the page
+        mirror_byte = 0b01 # MIRROR_BYTE: Set to 01b to start mirroring at the 2nd byte of the page
         strong_mod_en = 0b1 # STRG_MOD_EN: Set to 1b to enable strong modulation mode
         self.memory[41] = [
             (mirror_conf << 6) | (mirror_byte << 4) | (strong_mod_en << 2),  # MIRROR_CONF, MIRROR_BYTE, STRG_MOD_EN
@@ -40,64 +40,6 @@ class NTAG:
             (prot << 7) | (cfglck << 6) | (nfc_cnt_en << 4) | (nfc_cnt_pwd_prot << 3) | authlim,
             0x00, 0x00, 0x00   # RFU (Reserved for Future Use)
         ]
-        return True
-
-    def set_password(self, password=None):
-        if not password:
-            raise ValueError("Password must be provided.")
-        
-        # Password should be 8 characters long in hexadecimal (4 bytes)
-        if len(password) != 8 or not all(c in '0123456789ABCDEFabcdef' for c in password):
-            raise ValueError("Password must be 4 bytes long (8 hexadecimal characters).")
-        
-        # Convert the password to a byte array
-        pwd_bytes = [int(password[i:i+2], 16) for i in range(0, len(password), 2)]
-        
-        if self.debug:
-            print(f"Setting password: {password} (Bytes: {pwd_bytes})")
-
-        # Write the password to Block 43 in the memory
-        self.password = pwd_bytes
-        self.memory[43] = self.password
-        # Write empty password acknowledge to Block 44 in the memory
-        self.memory[44] = [0x00, 0x00, 0x00, 0x00]
-        if self.debug:
-            print(f"Password set successfully.")
-        return True
-
-    def authenticate(self):
-        """
-        Authenticate with the NTAG using the stored password.
-        """
-        if not self.password:
-            raise ValueError("No password set for authentication.")
-
-        if self.debug:
-            print(f"Authenticating with password: {self.password}")
-
-        # Construct the PWD_AUTH command (0x1B) with the password
-        params = bytearray([0x01, 0x1B] + self.password)  # 0x1B is the PWD_AUTH command
-
-        if self.debug:
-            print(f"Authentication params: {params}")
-
-        # Send the command to the NTAG
-        response = self.pn532._call_function(params=params, response_length=2)
-
-        if self.debug:
-            print(f"Authentication response: {response}")
-
-        # Check the response
-        if response is None or len(response) < 2:
-            print("Failed to authenticate with NTAG. Response was None or too short.")
-            return False
-
-        if response[0] != 0x00:
-            print(f"Authentication failed with error code: {response[0]}")
-            return False
-
-        if self.debug:
-            print("Authentication successful.")
         return True
         
     def write_block(self, block_number, data):
