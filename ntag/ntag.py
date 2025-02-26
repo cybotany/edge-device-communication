@@ -22,12 +22,6 @@ class NTAG:
         self.strong_mod_en = 0b1 # Enable strong modulation mode
         self.mirror_page = 0x0C  # What page the mirror starts
         self.auth0 = 0x05        # Password protection enabled from this page
-        # Configure protection and NFC counter settings
-        self.prot = 0b0              # Write access not protected (password verification disabled)
-        self.cfglock = 0b0           # Configuration remains open to write access
-        self.nfc_cnt_en = 0b1        # Enable NFC counter
-        self.nfc_cnt_pwd_prot = 0b0  # Disable password protection for NFC counter
-        self.authlim = 0b000         # No limitation on negative password attempts
         self.rfu = 0x00              # RFU (Reserved for Future Use)
         self.url = 'digidex.tech/links/?m=00000000000000x00000'
         self._set_initial_configurations()
@@ -45,12 +39,6 @@ class NTAG:
         self.memory[41] = [
             (self.mirror_conf << 6) | (self.mirror_byte << 4) | (self.strong_mod_en << 2),
             self.rfu, self.mirror_page, self.auth0
-        ]
-
-        # Configure protection and NFC counter settings (Page 42)
-        self.memory[42] = [
-            (self.prot << 7) | (self.cfglock << 6) | (self.nfc_cnt_en << 4) | (self.nfc_cnt_pwd_prot << 3) | self.authlim,
-            self.rfu, self.rfu, self.rfu
         ]
         
     def write_block(self, block_number, data):
