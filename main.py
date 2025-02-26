@@ -68,15 +68,12 @@ def main():
                     if ntag_uuid:
                         ntag_uuid = uuid.UUID(ntag_uuid)
                         payload = build_ntag_url(ntag_uuid)
-                        ntag.write_ndef(payload)
-                        print(f'Wrote NDEF message to NTAG with payload: {payload}')
-                        # ntag_pwd = ntag_uuid.hex[:8]
-                        # ntag.set_password(ntag_pwd)
-                        success = ntag.write_ndef()
+                        success = ntag.write_ndef(payload)
                         if success:
-                            print('Wrote NDEF message to NTAG.')
+                            print(f'Wrote NDEF message to NTAG with payload: {payload}')
                         else:
                             print('Failed to write NDEF message to NTAG.')
+                    
                 else:
                     print(f'Found duplicate card. Extracted UID: {uid}')
     except Exception as e:
