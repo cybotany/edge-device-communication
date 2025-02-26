@@ -18,7 +18,7 @@ class NTAG:
         self.tnf = 0x01
         # Configure mirror and modulation settings
         self.mirror_conf = 0b11  # Enable both UID and NFC counter ASCII mirror
-        self.mirror_byte = 0b11  # Start mirroring at the nth byte of the page
+        self.mirror_byte = 0b10  # Start mirroring at the nth byte of the page
         self.strong_mod_en = 0b0 # Enable strong modulation mode
         self.mirror_page = 0x0C  # What page the mirror starts
         self.auth0 = 0x05        # Password protection enabled from this page
