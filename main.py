@@ -29,9 +29,6 @@ def register_ntag(token, uid):
         response = requests.post(api_url, headers=headers, json=payload, verify=True)
         if response.status_code == 201 or response.status_code == 200:
             return response.json().get('uuid')
-        elif response.status_code == 409:
-            print("NTAG already registered")
-            return None
         else:
             print(f"Failed to register or update NTAG. Status code: {response.status_code}, Error: {response.text}")
             return None
