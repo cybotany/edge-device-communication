@@ -32,7 +32,7 @@ class NTAG:
         
         prot = 0b0 # PROT: Set to 0b to protect write access with password verification
         cfglck = 0b0 # CFGLCK: Set to 0b to keep configuration open to write access
-        nfc_cnt_en = 0b1 # NFC_CNT_EN: Set to 1b to enable NFC counter
+        nfc_cnt_en = 0b0 # NFC_CNT_EN: Set to 1b to enable NFC counter
         nfc_cnt_pwd_prot = 0b0 # NFC_CNT_PWD_PROT: Set to 0b to disable password protection for NFC counter
         authlim = 0b000 # AUTHLIM: Set to 000b to disable limitation of negative password attempts
         self.memory[42] = [
