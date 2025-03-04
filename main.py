@@ -39,7 +39,7 @@ def register_ntag(token, uid):
 
 def build_ntag_url(ntag_uuid):
     link_url = os.getenv('LINK_URL')
-    return f"{link_url}/?m={ntag_uuid}"
+    return f"{link_url}/?uuid={ntag_uuid}"
 
 def main():
     try:
